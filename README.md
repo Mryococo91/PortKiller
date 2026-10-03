@@ -79,7 +79,7 @@ $env:SIGNING_PFX_PATH = "C:\certs\portkiller.pfx"
 $env:SIGNING_PFX_PASSWORD = "***"
 .\scripts\sign-artifacts.ps1 -Paths @(
   ".\artifacts\portable\win-x64\PortKiller.exe",
-  ".\artifacts\msi\PortKiller-1.1.0-win-x64.msi"
+  ".\artifacts\msi\PortKiller-1.2.0-win-x64.msi"
 )
 ```
 
@@ -116,9 +116,9 @@ sideload mode. Poor fit for a public download.
 
 The UI uses WinUI `.resw` resources and follows the Windows display language.
 English (`en-US`) is the default fallback. French (`fr-FR`) is included.
-Users can override the language in the app; the choice is stored under
-`%LocalAppData%\PortKiller\language.txt`. Other preferences live in
-`%LocalAppData%\PortKiller\settings.json`.
+Users can override the language in the app; the choice is stored with the
+other preferences in `%LocalAppData%\PortKiller\settings.json`
+(a legacy `language.txt` is migrated automatically).
 
 To add a language:
 

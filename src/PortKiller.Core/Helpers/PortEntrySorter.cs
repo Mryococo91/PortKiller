@@ -27,7 +27,7 @@ public static class PortEntrySorter
             PortSortColumn.LocalAddress => Order(entries, entry => entry.LocalAddressDisplay, ascending),
             PortSortColumn.Pid => Order(entries, entry => entry.ProcessId, ascending),
             PortSortColumn.Process => Order(entries, entry => entry.ProcessNameDisplay, ascending),
-            _ => Order(entries, entry => entry.Port, ascending)
+            _ => throw new ArgumentOutOfRangeException(nameof(column), column, null)
         };
 
         return ordered.ThenBy(entry => entry.Port).ThenBy(entry => entry.ProcessId);

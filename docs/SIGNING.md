@@ -29,10 +29,20 @@ fades. No paid certificate is required for open-source distribution.
 ```powershell
 $env:SIGNING_PFX_PATH = "C:\certs\portkiller.pfx"
 $env:SIGNING_PFX_PASSWORD = "***"
+
+# Publish layout without zipping, sign binaries, then zip / build MSI.
+.\scripts\publish-portable.ps1 -Runtime win-x64 -SkipZip
 .\scripts\sign-artifacts.ps1 -Paths @(
   ".\artifacts\portable\win-x64\PortKiller.exe",
-  ".\artifacts\msi\PortKiller-1.1.0-win-x64.msi"
+  ".\artifacts\portable\win-x64\runtime\PortKiller.exe"
 )
+Compress-Archive -Path ".\artifacts\portable\win-x64\*" `
+  -DestinationPath ".\artifacts\portable\PortKiller-1.2.0-win-x64.zip" -Force
+
+.\scripts\publish-msi.ps1 -Runtime win-x64 -UninstallerOnly
+.\scripts\sign-artifacts.ps1 -Paths @(".\artifacts\portable\win-x64\Uninstaller.exe")
+.\scripts\publish-msi.ps1 -Runtime win-x64 -MsiOnly
+.\scripts\sign-artifacts.ps1 -Paths @(".\artifacts\msi\PortKiller-1.2.0-win-x64.msi")
 ```
 
 Never commit the certificate or password to git.
@@ -45,8 +55,11 @@ For the [Release workflow](../.github/workflows/release.yml):
 2. Add repository secrets:
    - `SIGNING_PFX_BASE64`
    - `SIGNING_PFX_PASSWORD`
-3. Push a `v*` tag. The release job signs EXE/MSI when the secrets are present;
-   otherwise it skips signing and still publishes artifacts.
+3. Push a `v*` tag. The release job signs **before** packaging:
+   - `PortKiller.exe` (launcher) and `runtime\PortKiller.exe` before the ZIP
+   - `Uninstaller.exe` before the MSI bind
+   - the `.msi` after it is built
+   When secrets are absent, signing is skipped and unsigned artifacts are still published.
 
 ## Manual signtool
 

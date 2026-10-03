@@ -1,7 +1,10 @@
 ﻿param(
     [ValidateSet("win-x64", "win-x86", "win-arm64")]
     [string]$Runtime = "win-x64",
-    [string]$Version = ""
+    [string]$Version = "",
+    # When set, leave artifacts\portable\<Runtime>\ ready without creating the ZIP
+    # (used by CI so binaries can be signed before Compress-Archive).
+    [switch]$SkipZip
 )
 
 $ErrorActionPreference = "Stop"
@@ -114,16 +117,21 @@ $setIcon = Join-Path $PSScriptRoot "Set-ExeIcon.ps1"
 # Windows looks up WinUI .mui files in <dll-folder>\<culture>\.
 # They therefore stay in runtime\fr-FR, runtime\ja-JP, and so on.
 
+$rootItems = Get-ChildItem $outDir | ForEach-Object { $_.Name }
+Write-Host ""
+Write-Host "Portable package ready:"
+Write-Host "  Folder : $outDir"
+Write-Host "  Root   : $($rootItems -join ', ')"
+Write-Host "  Launch : $(Join-Path $outDir 'PortKiller.exe')"
+
+if ($SkipZip) {
+    Write-Host "  ZIP    : skipped (-SkipZip)"
+    return
+}
+
 if (Test-Path $zipPath) {
     Remove-Item -Force $zipPath
 }
 
 Compress-Archive -Path (Join-Path $outDir "*") -DestinationPath $zipPath -Force
-
-$rootItems = Get-ChildItem $outDir | ForEach-Object { $_.Name }
-Write-Host ""
-Write-Host "Portable package ready:"
-Write-Host "  Folder : $outDir"
 Write-Host "  ZIP    : $zipPath"
-Write-Host "  Root   : $($rootItems -join ', ')"
-Write-Host "  Launch : $(Join-Path $outDir 'PortKiller.exe')"

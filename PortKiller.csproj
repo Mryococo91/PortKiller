@@ -16,6 +16,7 @@
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <DefaultLanguage>en-US</DefaultLanguage>
     <SatelliteResourceLanguages>en;fr</SatelliteResourceLanguages>
+    <ApplicationDisplayVersion>$(Version)</ApplicationDisplayVersion>
     <DefaultItemExcludes>$(DefaultItemExcludes);launcher\**;uninstaller\**;tests\**;installer\**;artifacts\**;src\**</DefaultItemExcludes>
   </PropertyGroup>
 

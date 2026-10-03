@@ -11,13 +11,20 @@ public sealed class AppLifecycleService : IAppLifecycleService
         string path = Environment.ProcessPath
             ?? throw new InvalidOperationException(AppStrings.Get("Error_CannotResolvePath"));
 
-        Process.Start(new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = path,
             UseShellExecute = true,
             WorkingDirectory = Environment.CurrentDirectory
-        });
+        };
 
+        // Preserve elevation across language restart so admin sessions stay elevated.
+        if (ElevationHelper.IsAdministrator())
+        {
+            startInfo.Verb = "runas";
+        }
+
+        Process.Start(startInfo);
         Exit();
     }
 

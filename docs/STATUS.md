@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-10-03
 
-**Version:** 1.1.0 (`Directory.Build.props`)
+**Version:** 1.2.0 (`Directory.Build.props`)
 
 ## Summary
 
@@ -17,15 +17,31 @@ a process after confirmation. EN/FR UI. GitHub CI + tag release automation.
 | Item | Status |
 | --- | --- |
 | MVP phases 1–9 | Done |
-| `PortKiller.Core` + unit tests | Done (31 tests) |
+| `PortKiller.Core` + unit tests | Done |
 | GitHub Actions CI | Done |
 | Tag release workflow (multi-arch ZIP/MSI) | Done |
 | Column sort + CSV export | Done |
 | User preferences persistence | Done |
 | Access Denied → relaunch as admin | Done |
 | Smoke script `scripts/run-smoke-checks.ps1` | Done |
-| Signing script + CI secrets hook | Done |
+| Signing script + CI secrets hook | Done (sign before ZIP/MSI) |
 | README badges / downloads / screenshot | Done |
+| P0: kill fail-closed + critical names | Done |
+| P0: refresh/terminate serialization | Done |
+| P0: uninstaller prefetch scoped to PORTKILLER* | Done |
+| P1: EndpointKey remote + CSV/details | Done |
+| P1: Success titles + feedback clearing | Done |
+| P1: prefs Save try/catch; star local column | Done |
+| P1: language restart keeps elevation | Done |
+| P1: release tag/manifest version checks | Done |
+| P1: uninstaller kills only under installDir | Done |
+| P1: VisibleEntries keyed sync | Done |
+| P2: Localize AsyncLocal + ConfigureDefault | Done |
+| P2: unified settings.json (language, window, banner) | Done |
+| P2: CSV BOM + formula guard; native buffer bounds | Done |
+| P2: a11y tooltips; toolbar scroll; Terminate Command | Done |
+| P2: FR TCP states + launcher vouvoiement | Done |
+| P2: CI smoke-publish x64 job | Done |
 
 ## Build
 
@@ -42,9 +58,9 @@ Distribution:
 .\scripts\publish-msi.ps1
 ```
 
-Release: push tag `v1.1.0` (must match `Directory.Build.props`).
+Release: push tag `v1.2.0` (must match `Directory.Build.props`).
 
 ## Next conversation
 
-Ship `v1.1.0` after manual UI smoke (`docs/SMOKE_TEST.md`). Optional: buy
-Authenticode cert and fill `SIGNING_PFX_*` secrets.
+Manual UI smoke (`docs/SMOKE_TEST.md`) on the published artifacts.
+Optional: Authenticode cert + `SIGNING_PFX_*`.

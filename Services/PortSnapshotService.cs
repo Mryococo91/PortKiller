@@ -20,13 +20,13 @@ public sealed class PortSnapshotService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 IReadOnlyList<PortEndpoint> endpoints = _tableReader.ReadAll();
-                _processInfoService.Reset();
+                var cache = new Dictionary<uint, ProcessIdentity>();
 
                 var entries = new List<PortEntry>(endpoints.Count);
                 foreach (PortEndpoint endpoint in endpoints)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    ProcessIdentity process = _processInfoService.Get(endpoint.ProcessId);
+                    ProcessIdentity process = _processInfoService.Get(endpoint.ProcessId, cache);
                     entries.Add(new PortEntry
                     {
                         Endpoint = endpoint,

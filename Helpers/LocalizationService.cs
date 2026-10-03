@@ -9,51 +9,16 @@ public static class LocalizationService
     public const string EnglishTag = "en-US";
     public const string FrenchTag = "fr-FR";
 
-    private const string SystemSettingValue = "system";
-
     public static IReadOnlyList<(string Tag, string NativeName)> Languages { get; } =
     [
         (EnglishTag, "English"),
         (FrenchTag, "Français")
     ];
 
-    private static readonly string SettingsPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "PortKiller",
-        "language.txt");
-
-    public static string GetSavedLanguageTag()
+    public static void ApplyLanguage(string tag)
     {
-        try
-        {
-            if (!File.Exists(SettingsPath))
-            {
-                return SystemTag;
-            }
-
-            string tag = File.ReadAllText(SettingsPath).Trim();
-            if (tag.Length == 0 || tag.Equals(SystemSettingValue, StringComparison.OrdinalIgnoreCase))
-            {
-                return SystemTag;
-            }
-
-            if (Languages.Any(language => language.Tag == tag))
-            {
-                return tag;
-            }
-        }
-        catch (IOException)
-        {
-        }
-
-        return SystemTag;
-    }
-
-    public static void ApplySavedLanguage()
-    {
-        string tag = GetSavedLanguageTag();
-        ApplicationLanguages.PrimaryLanguageOverride = tag;
-        if (tag.Length == 0)
+        ApplicationLanguages.PrimaryLanguageOverride = tag ?? SystemTag;
+        if (string.IsNullOrEmpty(tag))
         {
             return;
         }
@@ -63,16 +28,17 @@ public static class LocalizationService
         CultureInfo.DefaultThreadCurrentUICulture = culture;
     }
 
-    public static void SaveLanguage(string tag)
+    public static void ApplySavedLanguage(UserPreferences preferences)
     {
-        string directory = Path.GetDirectoryName(SettingsPath)
-            ?? throw new InvalidOperationException("Unable to resolve the language settings path.");
+        ArgumentNullException.ThrowIfNull(preferences);
+        ApplyLanguage(preferences.LanguageTag);
+    }
 
-        Directory.CreateDirectory(directory);
-        File.WriteAllText(
-            SettingsPath,
-            string.IsNullOrEmpty(tag) ? SystemSettingValue : tag);
-
-        ApplicationLanguages.PrimaryLanguageOverride = tag;
+    public static void SaveLanguage(UserPreferences preferences, string tag)
+    {
+        ArgumentNullException.ThrowIfNull(preferences);
+        preferences.LanguageTag = tag ?? SystemTag;
+        preferences.Save();
+        ApplyLanguage(preferences.LanguageTag);
     }
 }

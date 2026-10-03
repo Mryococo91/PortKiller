@@ -22,7 +22,7 @@ func main() {
 	if _, err := os.Stat(appExe); err != nil {
 		messageBox(tr(
 			"Unable to find runtime\\PortKiller.exe.\nExtract the portable archive without removing the runtime folder.",
-			"Impossible de trouver runtime\\PortKiller.exe.\nRéextrais l'archive portable sans supprimer le dossier runtime.",
+			"Impossible de trouver runtime\\PortKiller.exe.\nExtrayez l'archive portable sans supprimer le dossier runtime.",
 		))
 		os.Exit(1)
 	}

@@ -4,12 +4,28 @@ namespace PortKiller.Helpers;
 
 /// <summary>
 /// Protocol / TCP state labels. Resource keys are stable for tests;
-/// <see cref="Localize"/> is wired to WinUI .resw at app startup.
+/// call <see cref="ConfigureDefault"/> once at app startup, or <see cref="Use"/> in tests.
 /// </summary>
 public static class PortDisplayFormatter
 {
-    /// <summary>Defaults to returning the resource key (useful in unit tests).</summary>
-    public static Func<string, string> Localize { get; set; } = static key => key;
+    private static Func<string, string> _default = static key => key;
+    private static readonly AsyncLocal<Func<string, string>?> OverrideLocalizer = new();
+
+    public static Func<string, string> Localize => OverrideLocalizer.Value ?? _default;
+
+    public static void ConfigureDefault(Func<string, string> localize) =>
+        _default = localize ?? throw new ArgumentNullException(nameof(localize));
+
+    /// <summary>Scoped override (AsyncLocal) so parallel tests do not clobber each other.</summary>
+    public static IDisposable Use(Func<string, string> localize)
+    {
+        ArgumentNullException.ThrowIfNull(localize);
+        Func<string, string>? previous = OverrideLocalizer.Value;
+        OverrideLocalizer.Value = localize;
+        return new DelegateDisposable(() => OverrideLocalizer.Value = previous);
+    }
+
+    public static string NotApplicableDisplay => Localize("State_NotApplicable");
 
     public static string GetProtocolResourceKey(NetworkProtocol protocol) =>
         protocol switch
@@ -40,13 +56,18 @@ public static class PortDisplayFormatter
             TcpConnectionState.LastAck => "State_LastAck",
             TcpConnectionState.TimeWait => "State_TimeWait",
             TcpConnectionState.DeleteTcb => "State_DeleteTcb",
-            _ => "State_NotApplicable"
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null)
         };
     }
 
     /// <summary>English technical token used for search regardless of UI language.</summary>
     public static string GetCanonicalProtocol(NetworkProtocol protocol) =>
-        protocol == NetworkProtocol.Tcp ? "TCP" : "UDP";
+        protocol switch
+        {
+            NetworkProtocol.Tcp => "TCP",
+            NetworkProtocol.Udp => "UDP",
+            _ => throw new ArgumentOutOfRangeException(nameof(protocol), protocol, null)
+        };
 
     /// <summary>English technical token used for search regardless of UI language.</summary>
     public static string GetCanonicalState(NetworkProtocol protocol, TcpConnectionState state)
@@ -70,7 +91,7 @@ public static class PortDisplayFormatter
             TcpConnectionState.LastAck => "LAST_ACK",
             TcpConnectionState.TimeWait => "TIME_WAIT",
             TcpConnectionState.DeleteTcb => "DELETE_TCB",
-            _ => state.ToString().ToUpperInvariant()
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null)
         };
     }
 
@@ -79,4 +100,14 @@ public static class PortDisplayFormatter
 
     public static string FormatState(NetworkProtocol protocol, TcpConnectionState state) =>
         Localize(GetStateResourceKey(protocol, state));
+
+    private sealed class DelegateDisposable(Action dispose) : IDisposable
+    {
+        private Action? _dispose = dispose;
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _dispose, null)?.Invoke();
+        }
+    }
 }

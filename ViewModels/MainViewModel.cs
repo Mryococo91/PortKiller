@@ -17,6 +17,8 @@ public sealed class MainViewModel : ObservableObject
 
     private IReadOnlyList<PortEntry> _snapshot = [];
     private CancellationTokenSource? _refreshCts;
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
+    private int _refreshGeneration;
     private bool _isBusy;
     private string? _errorMessage;
     private string _statusMessage = AppStrings.Get("Status_Ready");
@@ -26,6 +28,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _isElevationBannerOpen;
     private bool _offerRelaunchAsAdmin;
     private PortEntry? _selectedEntry;
+    private string _successTitle = string.Empty;
     private string _successMessage = string.Empty;
     private PortSortColumn _sortColumn;
     private bool _sortAscending;
@@ -50,7 +53,7 @@ public sealed class MainViewModel : ObservableObject
 
         VisibleEntries = [];
         SelectedProcessPorts = [];
-        RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsBusy);
+        RefreshCommand = new AsyncRelayCommand(() => RefreshAsync(clearFeedback: true), () => !IsBusy);
         TerminateSelectedCommand = new AsyncRelayCommand(ConfirmAndTerminateSelectedAsync, () => CanTerminateSelected);
         ExportCsvCommand = new AsyncRelayCommand(ExportCsvAsync, () => !IsBusy && VisibleEntries.Count > 0);
         SortByPortCommand = new RelayCommand(() => ToggleSort(PortSortColumn.Port));
@@ -60,7 +63,7 @@ public sealed class MainViewModel : ObservableObject
         SortByPidCommand = new RelayCommand(() => ToggleSort(PortSortColumn.Pid));
         SortByProcessCommand = new RelayCommand(() => ToggleSort(PortSortColumn.Process));
         IsAdministrator = ElevationHelper.IsAdministrator();
-        _isElevationBannerOpen = !IsAdministrator;
+        _isElevationBannerOpen = !IsAdministrator && !preferences.HideElevationBanner;
     }
 
     public ObservableCollection<PortEntry> VisibleEntries { get; }
@@ -90,7 +93,20 @@ public sealed class MainViewModel : ObservableObject
     public bool IsElevationBannerOpen
     {
         get => _isElevationBannerOpen;
-        set => SetProperty(ref _isElevationBannerOpen, value);
+        set
+        {
+            if (!SetProperty(ref _isElevationBannerOpen, value))
+            {
+                return;
+            }
+
+            // Persist dismissal so the informational banner stays hidden next launch.
+            if (!value && !IsAdministrator && !_preferences.HideElevationBanner)
+            {
+                _preferences.HideElevationBanner = true;
+                _preferences.Save();
+            }
+        }
     }
 
     public bool OfferRelaunchAsAdmin
@@ -128,6 +144,11 @@ public sealed class MainViewModel : ObservableObject
         {
             if (SetProperty(ref _errorMessage, value))
             {
+                if (!string.IsNullOrEmpty(value))
+                {
+                    ClearSuccessFeedback();
+                }
+
                 OnPropertyChanged(nameof(HasError));
                 OnPropertyChanged(nameof(ShowErrorAdminAction));
             }
@@ -136,6 +157,12 @@ public sealed class MainViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
+    public string SuccessTitle
+    {
+        get => _successTitle;
+        private set => SetProperty(ref _successTitle, value);
+    }
+
     public string SuccessMessage
     {
         get => _successMessage;
@@ -143,6 +170,12 @@ public sealed class MainViewModel : ObservableObject
         {
             if (SetProperty(ref _successMessage, value))
             {
+                if (!string.IsNullOrEmpty(value))
+                {
+                    ErrorMessage = null;
+                    OfferRelaunchAsAdmin = false;
+                }
+
                 OnPropertyChanged(nameof(HasSuccess));
             }
         }
@@ -259,9 +292,13 @@ public sealed class MainViewModel : ObservableObject
     public bool CanTerminateSelected =>
         SelectedEntry?.Process is { } identity && _terminationService.CanTerminate(identity);
 
-    public string SelectedProcessName => SelectedEntry?.ProcessNameDisplay ?? "—";
+    public string SelectedProcessName =>
+        SelectedEntry?.ProcessNameDisplay ?? PortDisplayFormatter.NotApplicableDisplay;
 
-    public string SelectedProcessIdDisplay => SelectedEntry is null ? "—" : SelectedEntry.ProcessId.ToString();
+    public string SelectedProcessIdDisplay =>
+        SelectedEntry is null
+            ? PortDisplayFormatter.NotApplicableDisplay
+            : SelectedEntry.ProcessId.ToString();
 
     public string SelectedProcessPath =>
         string.IsNullOrWhiteSpace(SelectedEntry?.ExecutablePath)
@@ -290,7 +327,12 @@ public sealed class MainViewModel : ObservableObject
             string ports = string.Join(
                 Environment.NewLine,
                 SelectedProcessPorts.Select(entry =>
-                    $"  {entry.Port,-6} {entry.ProtocolDisplay,-4} {entry.StateDisplay}"));
+                {
+                    string remote = string.IsNullOrEmpty(entry.RemoteEndpointDisplay)
+                        ? string.Empty
+                        : $"  → {entry.RemoteEndpointDisplay}";
+                    return $"  {entry.Port,-6} {entry.ProtocolDisplay,-4} {entry.StateDisplay}{remote}";
+                }));
 
             return
                 AppStrings.Format("TerminateConfirm_Name", identity.FriendlyName) + Environment.NewLine +
@@ -303,42 +345,71 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    public async Task RefreshAsync()
+    public Task RefreshAsync() => RefreshAsync(clearFeedback: true);
+
+    public async Task RefreshAsync(bool clearFeedback)
     {
-        if (IsBusy)
-        {
-            return;
-        }
-
+        // Always preempt an in-flight refresh so post-terminate / F5 is never dropped.
         _refreshCts?.Cancel();
-        _refreshCts?.Dispose();
-        _refreshCts = new CancellationTokenSource();
-        CancellationToken token = _refreshCts.Token;
+        CancellationTokenSource cts = new();
+        CancellationTokenSource? previous = Interlocked.Exchange(ref _refreshCts, cts);
+        previous?.Dispose();
 
-        IsBusy = true;
-        ErrorMessage = null;
-        OfferRelaunchAsAdmin = false;
-
+        int generation = Interlocked.Increment(ref _refreshGeneration);
+        await _refreshLock.WaitAsync();
         try
         {
-            string? selectedKey = SelectedEntry?.EndpointKey;
-            IReadOnlyList<PortEntry> snapshot = await _snapshotService.GetSnapshotAsync(token);
-            _snapshot = snapshot;
-            ApplyFilter();
-            RestoreSelection(selectedKey);
-        }
-        catch (OperationCanceledException)
-        {
-            // A newer refresh replaced this one.
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = AppStrings.Format("Error_ReadPorts", ex.Message);
-            StatusMessage = AppStrings.Get("Status_RefreshFailed");
+            if (generation != _refreshGeneration)
+            {
+                return;
+            }
+
+            IsBusy = true;
+            if (clearFeedback)
+            {
+                ErrorMessage = null;
+                OfferRelaunchAsAdmin = false;
+                ClearSuccessFeedback();
+            }
+
+            try
+            {
+                string? selectedKey = SelectedEntry?.EndpointKey;
+                IReadOnlyList<PortEntry> snapshot = await _snapshotService.GetSnapshotAsync(cts.Token);
+                if (generation != _refreshGeneration)
+                {
+                    return;
+                }
+
+                _snapshot = snapshot;
+                ApplyFilter();
+                RestoreSelection(selectedKey);
+            }
+            catch (OperationCanceledException)
+            {
+                // A newer refresh replaced this one.
+            }
+            catch (Exception ex)
+            {
+                if (generation != _refreshGeneration)
+                {
+                    return;
+                }
+
+                ErrorMessage = AppStrings.Format("Error_ReadPorts", ex.Message);
+                StatusMessage = AppStrings.Get("Status_RefreshFailed");
+            }
+            finally
+            {
+                if (generation == _refreshGeneration)
+                {
+                    IsBusy = false;
+                }
+            }
         }
         finally
         {
-            IsBusy = false;
+            _refreshLock.Release();
         }
     }
 
@@ -370,24 +441,24 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        OfferRelaunchAsAdmin = false;
-
         try
         {
             await _terminationService.TerminateAsync(identity);
-            SuccessMessage = AppStrings.Format("Success_Terminated", identity.FriendlyName, identity.ProcessId);
-            await RefreshAsync();
+            await RefreshAsync(clearFeedback: false);
+            ShowSuccess(
+                AppStrings.Get("SuccessTitle_Terminated"),
+                AppStrings.Format("Success_Terminated", identity.FriendlyName, identity.ProcessId));
         }
         catch (ProcessAccessDeniedException ex)
         {
+            await RefreshAsync(clearFeedback: false);
             ErrorMessage = AppStrings.Format("Error_AccessDenied", ex.DisplayName);
             OfferRelaunchAsAdmin = !IsAdministrator;
-            await RefreshAsync();
         }
         catch (PortKillerException ex)
         {
+            await RefreshAsync(clearFeedback: false);
             ErrorMessage = LocalizeTerminationError(ex);
-            await RefreshAsync();
         }
         catch (Exception ex)
         {
@@ -415,7 +486,9 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
-        SuccessMessage = AppStrings.Format("Success_Exported", path);
+        ShowSuccess(
+            AppStrings.Get("SuccessTitle_Exported"),
+            AppStrings.Format("Success_Exported", path));
     }
 
     public void ClearSearch()
@@ -431,21 +504,19 @@ public sealed class MainViewModel : ObservableObject
 
     public void DismissSuccess()
     {
-        SuccessMessage = string.Empty;
+        ClearSuccessFeedback();
     }
 
     public void SaveColumnWidths(
         double port,
         double protocol,
         double state,
-        double localAddress,
         double pid,
         double process)
     {
         _preferences.ColumnPortWidth = ClampWidth(port, 48);
         _preferences.ColumnProtocolWidth = ClampWidth(protocol, 56);
         _preferences.ColumnStateWidth = ClampWidth(state, 72);
-        _preferences.ColumnLocalAddressWidth = ClampWidth(localAddress, 100);
         _preferences.ColumnPidWidth = ClampWidth(pid, 48);
         _preferences.ColumnProcessWidth = ClampWidth(process, 100);
         _preferences.Save();
@@ -473,17 +544,15 @@ public sealed class MainViewModel : ObservableObject
 
     private void ApplyFilter()
     {
-        IEnumerable<PortEntry> filtered = _snapshot
-            .Where(entry => PortEntryFilter.MatchesBusinessFilter(entry, ShowAllTcpConnections))
-            .Where(entry => PortEntryFilter.MatchesSearch(entry, SearchQuery));
+        List<PortEntry> filtered = PortEntrySorter.Sort(
+                _snapshot
+                    .Where(entry => PortEntryFilter.MatchesBusinessFilter(entry, ShowAllTcpConnections))
+                    .Where(entry => PortEntryFilter.MatchesSearch(entry, SearchQuery)),
+                SortColumn,
+                SortAscending)
+            .ToList();
 
-        filtered = PortEntrySorter.Sort(filtered, SortColumn, SortAscending);
-
-        VisibleEntries.Clear();
-        foreach (PortEntry entry in filtered)
-        {
-            VisibleEntries.Add(entry);
-        }
+        SyncObservableByKey(VisibleEntries, filtered, static entry => entry.EndpointKey);
 
         int totalBusiness = _snapshot.Count(entry =>
             PortEntryFilter.MatchesBusinessFilter(entry, ShowAllTcpConnections));
@@ -499,20 +568,119 @@ public sealed class MainViewModel : ObservableObject
 
     private void UpdateSelectedProcessPorts()
     {
-        SelectedProcessPorts.Clear();
         if (SelectedEntry is null)
         {
+            SelectedProcessPorts.Clear();
+            OnPropertyChanged(nameof(SelectedProcessPortCount));
+            OnPropertyChanged(nameof(TerminateConfirmationBody));
             return;
         }
 
         uint pid = SelectedEntry.Endpoint.ProcessId;
-        foreach (PortEntry entry in _snapshot.Where(candidate => candidate.Endpoint.ProcessId == pid))
-        {
-            SelectedProcessPorts.Add(entry);
-        }
+        List<PortEntry> ports = _snapshot
+            .Where(candidate => candidate.Endpoint.ProcessId == pid)
+            .ToList();
+
+        SyncObservableByKey(SelectedProcessPorts, ports, static entry => entry.EndpointKey);
 
         OnPropertyChanged(nameof(SelectedProcessPortCount));
         OnPropertyChanged(nameof(TerminateConfirmationBody));
+    }
+
+    /// <summary>
+    /// Updates <paramref name="target"/> to match <paramref name="source"/> order/keys
+    /// with Move/Insert/Remove instead of Clear, to reduce ListView flicker on auto-refresh.
+    /// </summary>
+    private static void SyncObservableByKey(
+        ObservableCollection<PortEntry> target,
+        IReadOnlyList<PortEntry> source,
+        Func<PortEntry, string> keySelector)
+    {
+        if (target.Count == source.Count)
+        {
+            bool sameKeys = true;
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (!string.Equals(keySelector(target[i]), keySelector(source[i]), StringComparison.Ordinal))
+                {
+                    sameKeys = false;
+                    break;
+                }
+            }
+
+            if (sameKeys)
+            {
+                for (int i = 0; i < source.Count; i++)
+                {
+                    if (!ReferenceEquals(target[i], source[i]))
+                    {
+                        target[i] = source[i];
+                    }
+                }
+
+                return;
+            }
+        }
+
+        var sourceKeys = new HashSet<string>(source.Select(keySelector), StringComparer.Ordinal);
+        for (int i = target.Count - 1; i >= 0; i--)
+        {
+            if (!sourceKeys.Contains(keySelector(target[i])))
+            {
+                target.RemoveAt(i);
+            }
+        }
+
+        for (int i = 0; i < source.Count; i++)
+        {
+            string key = keySelector(source[i]);
+            int existing = -1;
+            for (int j = i; j < target.Count; j++)
+            {
+                if (string.Equals(keySelector(target[j]), key, StringComparison.Ordinal))
+                {
+                    existing = j;
+                    break;
+                }
+            }
+
+            if (existing == i)
+            {
+                if (!ReferenceEquals(target[i], source[i]))
+                {
+                    target[i] = source[i];
+                }
+            }
+            else if (existing > i)
+            {
+                target.Move(existing, i);
+                if (!ReferenceEquals(target[i], source[i]))
+                {
+                    target[i] = source[i];
+                }
+            }
+            else
+            {
+                target.Insert(i, source[i]);
+            }
+        }
+
+        while (target.Count > source.Count)
+        {
+            target.RemoveAt(target.Count - 1);
+        }
+    }
+
+    private void ShowSuccess(string title, string message)
+    {
+        SuccessTitle = title;
+        SuccessMessage = message;
+    }
+
+    private void ClearSuccessFeedback()
+    {
+        SuccessTitle = string.Empty;
+        SuccessMessage = string.Empty;
     }
 
     private void RestoreSelection(string? endpointKey)
@@ -560,6 +728,7 @@ public sealed class MainViewModel : ObservableObject
             ProcessGoneException gone => AppStrings.Format("Error_ProcessGone", gone.ProcessId),
             ProcessAccessDeniedException denied => AppStrings.Format("Error_AccessDenied", denied.DisplayName),
             ProcessIdentityMismatchException => AppStrings.Get("Error_IdentityMismatch"),
+            ProcessIdentityUnverifiedException => AppStrings.Get("Error_IdentityUnverified"),
             ProtectedProcessException protectedEx => AppStrings.Get(protectedEx.ResourceKey),
             _ => AppStrings.Format("Error_Terminate", ex.Message)
         };

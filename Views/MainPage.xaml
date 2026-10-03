@@ -30,78 +30,89 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid ColumnSpacing="8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+        <ScrollViewer
+            HorizontalScrollBarVisibility="Auto"
+            HorizontalScrollMode="Auto"
+            VerticalScrollBarVisibility="Disabled"
+            VerticalScrollMode="Disabled">
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" MinWidth="160" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-            <TextBox
-                x:Name="SearchBox"
-                x:Uid="SearchBox"
-                Grid.Column="0"
-                Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay}"
-                TextChanged="OnSearchTextChanged" />
+                <TextBox
+                    x:Name="SearchBox"
+                    x:Uid="SearchBox"
+                    Grid.Column="0"
+                    Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-            <CheckBox
-                x:Name="ShowAllTcpCheckBox"
-                x:Uid="ShowAllTcpCheckBox"
-                Grid.Column="1"
-                IsChecked="{x:Bind ViewModel.ShowAllTcpConnections, Mode=TwoWay}"
-                VerticalAlignment="Center" />
+                <CheckBox
+                    x:Name="ShowAllTcpCheckBox"
+                    x:Uid="ShowAllTcpCheckBox"
+                    Grid.Column="1"
+                    IsChecked="{x:Bind ViewModel.ShowAllTcpConnections, Mode=TwoWay}"
+                    VerticalAlignment="Center" />
 
-            <ToggleSwitch
-                x:Name="AutoRefreshSwitch"
-                x:Uid="AutoRefreshSwitch"
-                Grid.Column="2"
-                IsOn="{x:Bind ViewModel.IsAutoRefreshEnabled, Mode=TwoWay}"
-                Toggled="OnAutoRefreshToggled"
-                VerticalAlignment="Center" />
+                <ToggleSwitch
+                    x:Name="AutoRefreshSwitch"
+                    x:Uid="AutoRefreshSwitch"
+                    Grid.Column="2"
+                    IsOn="{x:Bind ViewModel.IsAutoRefreshEnabled, Mode=TwoWay}"
+                    Toggled="OnAutoRefreshToggled"
+                    VerticalAlignment="Center" />
 
-            <Button
-                Grid.Column="3"
-                Command="{x:Bind ViewModel.RefreshCommand}"
-                VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE72C;" />
-                    <TextBlock x:Uid="RefreshButtonText" />
-                </StackPanel>
-            </Button>
+                <Button
+                    x:Name="RefreshButton"
+                    x:Uid="RefreshButton"
+                    Grid.Column="3"
+                    Command="{x:Bind ViewModel.RefreshCommand}"
+                    VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE72C;" AutomationProperties.AccessibilityView="Raw" />
+                        <TextBlock x:Uid="RefreshButtonText" />
+                    </StackPanel>
+                </Button>
 
-            <Button
-                Grid.Column="4"
-                Command="{x:Bind ViewModel.ExportCsvCommand}"
-                VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE792;" />
-                    <TextBlock x:Uid="ExportButtonText" />
-                </StackPanel>
-            </Button>
+                <Button
+                    x:Name="ExportButton"
+                    x:Uid="ExportButton"
+                    Grid.Column="4"
+                    Command="{x:Bind ViewModel.ExportCsvCommand}"
+                    VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE792;" AutomationProperties.AccessibilityView="Raw" />
+                        <TextBlock x:Uid="ExportButtonText" />
+                    </StackPanel>
+                </Button>
 
-            <Button
-                Grid.Column="5"
-                Click="OnTerminateClicked"
-                IsEnabled="{x:Bind ViewModel.CanTerminateSelected, Mode=OneWay}"
-                Style="{StaticResource AccentButtonStyle}"
-                VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="14" Glyph="&#xE74D;" />
-                    <TextBlock x:Uid="TerminateButtonText" />
-                </StackPanel>
-            </Button>
+                <Button
+                    x:Name="TerminateButton"
+                    x:Uid="TerminateButton"
+                    Grid.Column="5"
+                    Command="{x:Bind ViewModel.TerminateSelectedCommand}"
+                    Style="{StaticResource AccentButtonStyle}"
+                    VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE74D;" AutomationProperties.AccessibilityView="Raw" />
+                        <TextBlock x:Uid="TerminateButtonText" />
+                    </StackPanel>
+                </Button>
 
-            <ComboBox
-                x:Name="LanguageBox"
-                Grid.Column="6"
-                MinWidth="128"
-                VerticalAlignment="Center"
-                SelectionChanged="OnLanguageChanged" />
-        </Grid>
+                <ComboBox
+                    x:Name="LanguageBox"
+                    x:Uid="LanguageBox"
+                    Grid.Column="6"
+                    MinWidth="128"
+                    VerticalAlignment="Center"
+                    SelectionChanged="OnLanguageChanged" />
+            </Grid>
+        </ScrollViewer>
 
         <StackPanel Grid.Row="1" Spacing="8">
             <InfoBar
@@ -130,9 +141,9 @@
             </InfoBar>
 
             <InfoBar
-                x:Uid="SuccessBanner"
                 IsClosable="True"
                 IsOpen="{x:Bind ViewModel.HasSuccess, Mode=OneWay}"
+                Title="{x:Bind ViewModel.SuccessTitle, Mode=OneWay}"
                 Message="{x:Bind ViewModel.SuccessMessage, Mode=OneWay}"
                 Severity="Success"
                 Closed="OnSuccessClosed" />
@@ -260,6 +271,7 @@
 
                 <ListView
                     x:Name="PortsList"
+                    x:Uid="PortsList"
                     Grid.Row="1"
                     IsTabStop="True"
                     ItemsSource="{x:Bind ViewModel.VisibleEntries, Mode=OneWay}"
@@ -393,11 +405,18 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="56" />
                                             <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="72" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{x:Bind Port}" />
                                         <TextBlock Grid.Column="1" Text="{x:Bind ProtocolDisplay}" />
                                         <TextBlock Grid.Column="2" Text="{x:Bind StateDisplay}" />
+                                        <TextBlock
+                                            Grid.Column="3"
+                                            Opacity="0.75"
+                                            Text="{x:Bind RemoteEndpointDisplay}"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTipService.ToolTip="{x:Bind RemoteEndpointDisplay}" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

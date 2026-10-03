@@ -10,7 +10,7 @@
   <Identity
     Name="PortKiller.App"
     Publisher="CN=PortKiller"
-    Version="1.0.0.0" />
+    Version="1.2.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="46B7A346-57CC-46D9-A1E7-13D6518FA712" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 

@@ -4,11 +4,13 @@ using Xunit;
 
 namespace PortKiller.Tests;
 
-public sealed class PortEntrySorterTests
+public sealed class PortEntrySorterTests : IDisposable
 {
+    private readonly IDisposable _localize;
+
     public PortEntrySorterTests()
     {
-        PortDisplayFormatter.Localize = static key => key switch
+        _localize = PortDisplayFormatter.Use(static key => key switch
         {
             "Protocol_Tcp" => "TCP",
             "Protocol_Udp" => "UDP",
@@ -16,8 +18,10 @@ public sealed class PortEntrySorterTests
             "State_Established" => "ESTABLISHED",
             "State_NotApplicable" => "—",
             _ => key
-        };
+        });
     }
+
+    public void Dispose() => _localize.Dispose();
 
     [Fact]
     public void Sort_ByPortDescending()

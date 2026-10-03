@@ -15,6 +15,12 @@
   <data name="SearchBox.PlaceholderText" xml:space="preserve">
     <value>Search by port, PID, process, or path</value>
   </data>
+  <data name="SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Search ports</value>
+  </data>
+  <data name="SearchBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Search (Ctrl+F or /)</value>
+  </data>
   <data name="ShowAllTcpCheckBox.Content" xml:space="preserve">
     <value>All TCP connections</value>
   </data>
@@ -27,8 +33,20 @@
   <data name="RefreshButtonText.Text" xml:space="preserve">
     <value>Refresh</value>
   </data>
+  <data name="RefreshButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="RefreshButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Refresh (F5)</value>
+  </data>
   <data name="ExportButtonText.Text" xml:space="preserve">
     <value>Export CSV</value>
+  </data>
+  <data name="ExportButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Export CSV</value>
+  </data>
+  <data name="ExportButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Export CSV (Ctrl+E)</value>
   </data>
   <data name="Export_CsvFileType" xml:space="preserve">
     <value>CSV file</value>
@@ -38,6 +56,21 @@
   </data>
   <data name="TerminateButtonText.Text" xml:space="preserve">
     <value>Terminate process</value>
+  </data>
+  <data name="TerminateButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Terminate process</value>
+  </data>
+  <data name="TerminateButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Terminate process (Delete)</value>
+  </data>
+  <data name="LanguageBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="LanguageBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Display language</value>
+  </data>
+  <data name="PortsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Port list</value>
   </data>
   <data name="ElevationBanner.Title" xml:space="preserve">
     <value>Running without elevated privileges</value>
@@ -51,8 +84,11 @@
   <data name="ErrorBanner.Title" xml:space="preserve">
     <value>Error</value>
   </data>
-  <data name="SuccessBanner.Title" xml:space="preserve">
+  <data name="SuccessTitle_Terminated" xml:space="preserve">
     <value>Process terminated</value>
+  </data>
+  <data name="SuccessTitle_Exported" xml:space="preserve">
+    <value>Export complete</value>
   </data>
   <data name="ColumnPort.Text" xml:space="preserve">
     <value>Port</value>
@@ -173,6 +209,9 @@
   <data name="Error_IdentityMismatch" xml:space="preserve">
     <value>The process changed since it was listed (the PID may have been reused). The list will be refreshed.</value>
   </data>
+  <data name="Error_IdentityUnverified" xml:space="preserve">
+    <value>Unable to verify the process identity. Termination was refused to avoid killing the wrong process.</value>
+  </data>
   <data name="Error_NoProcessSelected" xml:space="preserve">
     <value>No process is selected.</value>
   </data>
@@ -184,6 +223,9 @@
   </data>
   <data name="Error_SelfProtected" xml:space="preserve">
     <value>Port Killer cannot terminate itself from this action.</value>
+  </data>
+  <data name="Error_CriticalProtected" xml:space="preserve">
+    <value>This system-critical process cannot be terminated.</value>
   </data>
   <data name="Error_CannotResolvePath" xml:space="preserve">
     <value>Unable to determine the Port Killer path.</value>

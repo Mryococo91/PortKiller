@@ -79,7 +79,7 @@ func main() {
 	}
 
 	time.Sleep(600 * time.Millisecond)
-	killPortKillerProcesses()
+	killPortKillerProcesses(args.installDir)
 	uninstallMsiProducts()
 	wipeLeftovers(args.installDir)
 	messageBox(
@@ -125,7 +125,12 @@ func relaunchFromTemp(self, installDir string) error {
 	return cmd.Start()
 }
 
-func killPortKillerProcesses() {
+func killPortKillerProcesses(installDir string) {
+	if strings.TrimSpace(installDir) == "" {
+		// Fail closed: never kill by name alone without an install root.
+		return
+	}
+
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
 	createSnap := kernel32.NewProc("CreateToolhelp32Snapshot")
 	procFirst := kernel32.NewProc("Process32FirstW")
@@ -149,13 +154,13 @@ func killPortKillerProcesses() {
 	for ok != 0 {
 		name := strings.ToLower(syscall.UTF16ToString(entry.ExeFile[:]))
 		if entry.ProcessID != selfPid && name == "portkiller.exe" {
-			terminatePid(openProcess, terminate, waitFor, queryName, closeHandle, entry.ProcessID)
+			terminatePid(openProcess, terminate, waitFor, queryName, closeHandle, entry.ProcessID, installDir)
 		}
 		ok, _, _ = procNext.Call(snap, uintptr(unsafe.Pointer(&entry)))
 	}
 }
 
-func terminatePid(openProcess, terminate, waitFor, queryName, closeHandle *syscall.LazyProc, pid uint32) {
+func terminatePid(openProcess, terminate, waitFor, queryName, closeHandle *syscall.LazyProc, pid uint32, installDir string) {
 	access := uintptr(processTerminate | processQueryLimitedInformation | synchronize)
 	handle, _, _ := openProcess.Call(access, 0, uintptr(pid))
 	if handle == 0 {
@@ -166,13 +171,47 @@ func terminatePid(openProcess, terminate, waitFor, queryName, closeHandle *sysca
 	var buf [maxPath]uint16
 	size := uint32(len(buf))
 	queryName.Call(handle, 0, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
-	image := strings.ToLower(syscall.UTF16ToString(buf[:]))
-	if strings.Contains(image, "portkiller-uninstaller.exe") || strings.Contains(image, "uninstaller.exe") {
+	image := syscall.UTF16ToString(buf[:])
+	lowerImage := strings.ToLower(image)
+	if strings.Contains(lowerImage, "portkiller-uninstaller.exe") ||
+		strings.HasSuffix(lowerImage, `\uninstaller.exe`) ||
+		strings.HasSuffix(lowerImage, `/uninstaller.exe`) {
+		return
+	}
+
+	if !isPathUnderInstallDir(image, installDir) {
 		return
 	}
 
 	terminate.Call(handle, 1)
 	waitFor.Call(handle, 3000)
+}
+
+func isPathUnderInstallDir(imagePath, installDir string) bool {
+	if strings.TrimSpace(imagePath) == "" || strings.TrimSpace(installDir) == "" {
+		return false
+	}
+
+	absImage, err := filepath.Abs(imagePath)
+	if err != nil {
+		return false
+	}
+	absInstall, err := filepath.Abs(installDir)
+	if err != nil {
+		return false
+	}
+
+	absImage = filepath.Clean(absImage)
+	absInstall = filepath.Clean(absInstall)
+	prefix := absInstall
+	if !strings.HasSuffix(prefix, string(os.PathSeparator)) {
+		prefix += string(os.PathSeparator)
+	}
+
+	lowerImage := strings.ToLower(absImage)
+	lowerPrefix := strings.ToLower(prefix)
+	lowerInstall := strings.ToLower(absInstall)
+	return lowerImage == lowerInstall || strings.HasPrefix(lowerImage, lowerPrefix)
 }
 
 func uninstallMsiProducts() {
@@ -247,8 +286,8 @@ func wipeUserProfiles() {
 }
 
 func removePrefetch() {
+	// Only Port Killer prefetch entries — never a generic UNINSTALLER*.pf glob.
 	removeGlob(`C:\Windows\Prefetch`, "PORTKILLER*.pf")
-	removeGlob(`C:\Windows\Prefetch`, "UNINSTALLER*.pf")
 }
 
 func removeRegistryTraces() {

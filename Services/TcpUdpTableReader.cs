@@ -28,7 +28,7 @@ public sealed class TcpUdpTableReader
                 IpHelperNative.TcpTableClass.OwnerPidAll,
                 0));
 
-        uint count = *(uint*)buffer.Pointer;
+        uint count = ReadRowCount(buffer, (uint)sizeof(IpHelperNative.MibTcpRowOwnerPid));
         var rows = (IpHelperNative.MibTcpRowOwnerPid*)((byte*)buffer.Pointer + sizeof(uint));
         for (uint i = 0; i < count; i++)
         {
@@ -57,7 +57,7 @@ public sealed class TcpUdpTableReader
                 IpHelperNative.TcpTableClass.OwnerPidAll,
                 0));
 
-        uint count = *(uint*)buffer.Pointer;
+        uint count = ReadRowCount(buffer, (uint)sizeof(IpHelperNative.MibTcp6RowOwnerPid));
         var rows = (IpHelperNative.MibTcp6RowOwnerPid*)((byte*)buffer.Pointer + sizeof(uint));
         for (uint i = 0; i < count; i++)
         {
@@ -86,7 +86,7 @@ public sealed class TcpUdpTableReader
                 IpHelperNative.UdpTableClass.OwnerPid,
                 0));
 
-        uint count = *(uint*)buffer.Pointer;
+        uint count = ReadRowCount(buffer, (uint)sizeof(IpHelperNative.MibUdpRowOwnerPid));
         var rows = (IpHelperNative.MibUdpRowOwnerPid*)((byte*)buffer.Pointer + sizeof(uint));
         for (uint i = 0; i < count; i++)
         {
@@ -113,7 +113,7 @@ public sealed class TcpUdpTableReader
                 IpHelperNative.UdpTableClass.OwnerPid,
                 0));
 
-        uint count = *(uint*)buffer.Pointer;
+        uint count = ReadRowCount(buffer, (uint)sizeof(IpHelperNative.MibUdp6RowOwnerPid));
         var rows = (IpHelperNative.MibUdp6RowOwnerPid*)((byte*)buffer.Pointer + sizeof(uint));
         for (uint i = 0; i < count; i++)
         {
@@ -129,6 +129,24 @@ public sealed class TcpUdpTableReader
         }
     }
 
+    private static unsafe uint ReadRowCount(NativeBuffer buffer, uint rowSize)
+    {
+        if (buffer.ByteLength < sizeof(uint))
+        {
+            throw new InvalidOperationException("The network table buffer is too small to contain a row count.");
+        }
+
+        uint count = *(uint*)buffer.Pointer;
+        ulong needed = (ulong)sizeof(uint) + ((ulong)count * rowSize);
+        if (needed > buffer.ByteLength)
+        {
+            throw new InvalidOperationException(
+                $"The network table buffer is smaller than the declared row count ({count}).");
+        }
+
+        return count;
+    }
+
     private static TcpConnectionState MapTcpState(uint state) => NetworkMapping.MapTcpState(state);
 
     private delegate uint NativeTableCall(nint buffer, ref uint size);
@@ -136,6 +154,8 @@ public sealed class TcpUdpTableReader
     private sealed class NativeBuffer : IDisposable
     {
         public nint Pointer { get; private set; }
+
+        public uint ByteLength { get; private set; }
 
         public static NativeBuffer Query(NativeTableCall nativeCall)
         {
@@ -148,13 +168,16 @@ public sealed class TcpUdpTableReader
 
             for (int attempt = 0; attempt < 5; attempt++)
             {
-                nint buffer = Marshal.AllocHGlobal((int)Math.Max(size, 4u));
+                uint allocSize = Math.Max(size, 4u);
+                nint buffer = Marshal.AllocHGlobal((int)allocSize);
                 bool transferOwnership = false;
                 try
                 {
-                    status = nativeCall(buffer, ref size);
+                    uint requestSize = allocSize;
+                    status = nativeCall(buffer, ref requestSize);
                     if (status == IpHelperNative.ErrorInsufficientBuffer)
                     {
+                        size = requestSize;
                         continue;
                     }
 
@@ -164,7 +187,7 @@ public sealed class TcpUdpTableReader
                     }
 
                     transferOwnership = true;
-                    return new NativeBuffer { Pointer = buffer };
+                    return new NativeBuffer { Pointer = buffer, ByteLength = allocSize };
                 }
                 finally
                 {
@@ -184,6 +207,7 @@ public sealed class TcpUdpTableReader
             {
                 Marshal.FreeHGlobal(Pointer);
                 Pointer = nint.Zero;
+                ByteLength = 0;
             }
         }
     }

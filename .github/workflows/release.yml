@@ -44,32 +44,101 @@ jobs:
         shell: pwsh
         run: |
           $version = & .\scripts\Get-PortKillerVersion.ps1
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          Write-Host "Version $version"
-
-      - name: Publish packages
-        shell: pwsh
-        run: |
-          if ("${{ matrix.build_msi }}" -eq "true") {
-            .\scripts\publish-msi.ps1 -Runtime ${{ matrix.runtime }} -Version ${{ steps.version.outputs.version }}
-          } else {
-            .\scripts\publish-portable.ps1 -Runtime ${{ matrix.runtime }} -Version ${{ steps.version.outputs.version }}
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -ne "v$version") {
+            throw "Git tag '$tag' must match Directory.Build.props Version 'v$version'."
           }
 
-      - name: Optional Authenticode sign
+          $manifest = Get-Content -LiteralPath "Package.appxmanifest" -Raw
+          if ($manifest -notmatch [regex]::Escape("Version=`"$version.0`"")) {
+            throw "Package.appxmanifest Identity Version must be '$version.0' to match Directory.Build.props."
+          }
+
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Version $version (tag $tag OK)"
+
+      - name: Publish portable layout
+        shell: pwsh
+        run: |
+          .\scripts\publish-portable.ps1 `
+            -Runtime ${{ matrix.runtime }} `
+            -Version ${{ steps.version.outputs.version }} `
+            -SkipZip
+
+      - name: Optional Authenticode sign (portable binaries)
         env:
           SIGNING_PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
           SIGNING_PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
         shell: pwsh
         run: |
           if ([string]::IsNullOrWhiteSpace($env:SIGNING_PFX_BASE64)) {
-            Write-Host "Signing secrets not configured; skipping."
+            Write-Host "Signing secrets not configured; skipping binary signing."
             exit 0
           }
-          $paths = @("artifacts\portable\${{ matrix.runtime }}\PortKiller.exe")
-          $msi = "artifacts\msi\PortKiller-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.msi"
-          if (Test-Path $msi) { $paths += $msi }
+          $portable = "artifacts\portable\${{ matrix.runtime }}"
+          $paths = @(
+            "$portable\PortKiller.exe",
+            "$portable\runtime\PortKiller.exe"
+          )
           .\scripts\sign-artifacts.ps1 -Paths $paths
+
+      - name: Zip portable package
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $runtime = "${{ matrix.runtime }}"
+          $outDir = "artifacts\portable\$runtime"
+          $zipPath = "artifacts\portable\PortKiller-$version-$runtime.zip"
+          if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
+          Compress-Archive -Path (Join-Path $outDir "*") -DestinationPath $zipPath -Force
+          Write-Host "Created $zipPath"
+
+      - name: Build Uninstaller.exe
+        if: matrix.build_msi
+        shell: pwsh
+        run: |
+          .\scripts\publish-msi.ps1 `
+            -Runtime ${{ matrix.runtime }} `
+            -Version ${{ steps.version.outputs.version }} `
+            -UninstallerOnly
+
+      - name: Optional Authenticode sign (Uninstaller)
+        if: matrix.build_msi
+        env:
+          SIGNING_PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          SIGNING_PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PFX_BASE64)) {
+            Write-Host "Signing secrets not configured; skipping Uninstaller signing."
+            exit 0
+          }
+          .\scripts\sign-artifacts.ps1 -Paths @(
+            "artifacts\portable\${{ matrix.runtime }}\Uninstaller.exe"
+          )
+
+      - name: Build MSI
+        if: matrix.build_msi
+        shell: pwsh
+        run: |
+          .\scripts\publish-msi.ps1 `
+            -Runtime ${{ matrix.runtime }} `
+            -Version ${{ steps.version.outputs.version }} `
+            -MsiOnly
+
+      - name: Optional Authenticode sign (MSI)
+        if: matrix.build_msi
+        env:
+          SIGNING_PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          SIGNING_PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PFX_BASE64)) {
+            Write-Host "Signing secrets not configured; skipping MSI signing."
+            exit 0
+          }
+          $msi = "artifacts\msi\PortKiller-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.msi"
+          .\scripts\sign-artifacts.ps1 -Paths @($msi)
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

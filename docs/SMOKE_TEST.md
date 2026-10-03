@@ -28,23 +28,29 @@ when possible.
 - [ ] Search `LISTENING` still matches when UI language is French
 - [ ] Click column headers sorts (port / PID / process / state)
 - [ ] Export CSV (`Ctrl+E`) writes a file with the visible rows
-- [ ] Details pane lists all ports for a multi-port process
+- [ ] Export success banner title is **Export complete** / **Export terminé** (not “Process terminated”)
+- [ ] CSV has UTF-8 BOM and columns `RemoteAddress` / `RemotePort`
+- [ ] Details pane lists all ports for a multi-port process (remote endpoint when present)
 - [ ] Copy PID / path works
 - [ ] F5 refreshes; Delete opens confirmation; Escape clears search
-- [ ] Auto-refresh + “All TCP” survive an app restart (`settings.json`)
+- [ ] Tooltips mention shortcuts (F5, Ctrl+F, Ctrl+E, Delete)
+- [ ] Auto-refresh + “All TCP” + window size + language survive an app restart (`settings.json`)
+- [ ] Dismissing the elevation banner keeps it hidden after restart
 
 ## Termination
 
 - [ ] Terminate a disposable user process (e.g. `python -m http.server 8765`) succeeds after confirm
-- [ ] PID 0 / PID 4 / self: Terminate stays disabled or shows a clear protection message
-- [ ] After kill, list refreshes and success banner appears
+- [ ] After kill, list refreshes and success banner title is **Process terminated**
+- [ ] PID 0 / PID 4 / self / critical names (`csrss`, `lsass`, …): Terminate stays disabled
+- [ ] Process without verifiable identity (no StartTime and no path): Terminate disabled / clear message
 - [ ] Access Denied (protected process without admin) shows the localized error **and** a Relaunch as administrator action
 
 ## Elevation & language
 
-- [ ] Non-admin banner is visible when not elevated
+- [ ] Non-admin banner is visible when not elevated (first launch)
 - [ ] Relaunch as administrator prompts UAC (cancel leaves the app running)
 - [ ] Language combo: System / English / Français; changing language restarts the app
+- [ ] Changing language while elevated keeps the new instance elevated
 - [ ] French Windows (or override Français): toolbar and dialogs are French; states like ÉCOUTE appear
 
 ## MSI install / uninstall
@@ -53,3 +59,4 @@ when possible.
 - [ ] Desktop + Start Menu shortcuts launch the app
 - [ ] `C:\Program Files\Port Killer\Uninstaller.exe` exists (name exact)
 - [ ] Uninstaller confirms, removes app files, shortcuts, and leaves no `Desinstaller.exe`
+- [ ] Uninstaller does not kill a portable `PortKiller.exe` running from another folder

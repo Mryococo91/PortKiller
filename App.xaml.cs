@@ -11,8 +11,9 @@ public partial class App : Application
 
     public App()
     {
-        LocalizationService.ApplySavedLanguage();
-        PortDisplayFormatter.Localize = AppStrings.Get;
+        Preferences = UserPreferences.Load();
+        LocalizationService.ApplySavedLanguage(Preferences);
+        PortDisplayFormatter.ConfigureDefault(AppStrings.Get);
         InitializeComponent();
 
         var tableReader = new TcpUdpTableReader();
@@ -23,14 +24,15 @@ public partial class App : Application
         ClipboardService = new ClipboardService();
         LifecycleService = new AppLifecycleService();
         FileExportService = new FileExportService(() => MainWindow);
-        UserPreferences preferences = UserPreferences.Load();
         ViewModel = new MainViewModel(
             snapshotService,
             terminationService,
             DialogService,
             FileExportService,
-            preferences);
+            Preferences);
     }
+
+    public UserPreferences Preferences { get; }
 
     public MainViewModel ViewModel { get; }
 
@@ -46,7 +48,7 @@ public partial class App : Application
 
     protected override void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        _window = new MainWindow();
+        _window = new MainWindow(Preferences);
         _window.Activate();
     }
 }

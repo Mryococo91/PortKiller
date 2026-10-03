@@ -51,6 +51,14 @@ public sealed class ProcessIdentityMismatchException : PortKillerException
     }
 }
 
+public sealed class ProcessIdentityUnverifiedException : PortKillerException
+{
+    public ProcessIdentityUnverifiedException()
+        : base("Unable to verify the process identity (start time or name and path). Termination was refused.")
+    {
+    }
+}
+
 public sealed class ProtectedProcessException : PortKillerException
 {
     public string ResourceKey { get; }

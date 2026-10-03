@@ -7,43 +7,42 @@ namespace PortKiller.Services;
 
 public sealed class ProcessInfoService
 {
-    private readonly Dictionary<uint, ProcessIdentity> _cache = [];
-
-    public void Reset()
+    /// <summary>
+    /// Resolves process identity. Pass a per-snapshot cache so concurrent snapshots
+    /// never share mutable dictionary state.
+    /// </summary>
+    public ProcessIdentity Get(uint processId, Dictionary<uint, ProcessIdentity> cache)
     {
-        _cache.Clear();
-    }
+        ArgumentNullException.ThrowIfNull(cache);
 
-    public ProcessIdentity Get(uint processId)
-    {
-        if (_cache.TryGetValue(processId, out ProcessIdentity? cached))
+        if (cache.TryGetValue(processId, out ProcessIdentity? cached))
         {
             return cached;
         }
 
         ProcessIdentity identity = Resolve(processId);
-        _cache[processId] = identity;
+        cache[processId] = identity;
         return identity;
     }
 
     private static ProcessIdentity Resolve(uint processId)
     {
-        if (processId == 0)
+        if (processId == ProcessTerminationService.IdleProcessId)
         {
             return new ProcessIdentity
             {
-                ProcessId = 0,
+                ProcessId = ProcessTerminationService.IdleProcessId,
                 ProcessName = "Idle",
                 ExecutablePath = null,
                 StartTime = null
             };
         }
 
-        if (processId == 4)
+        if (processId == ProcessTerminationService.SystemProcessId)
         {
             return new ProcessIdentity
             {
-                ProcessId = 4,
+                ProcessId = ProcessTerminationService.SystemProcessId,
                 ProcessName = "System",
                 ExecutablePath = null,
                 StartTime = null
@@ -75,7 +74,7 @@ public sealed class ProcessInfoService
 
         if (string.IsNullOrWhiteSpace(processName) && !string.IsNullOrWhiteSpace(path))
         {
-            processName = System.IO.Path.GetFileName(path);
+            processName = Path.GetFileName(path);
         }
 
         processName ??= $"PID {pid}";

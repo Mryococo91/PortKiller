@@ -9,24 +9,27 @@ public sealed class ProcessTerminationService
     public const int IdleProcessId = 0;
     public const int SystemProcessId = 4;
 
+    /// <summary>
+    /// Process image names that must never be terminated (BSOD / system instability risk).
+    /// Compared case-insensitively with or without a trailing ".exe".
+    /// </summary>
+    private static readonly HashSet<string> CriticalProcessNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "csrss",
+        "wininit",
+        "winlogon",
+        "services",
+        "lsass",
+        "smss",
+        "system",
+        "registry",
+        "memcompression",
+        "memory compression",
+    };
+
     public bool CanTerminate(ProcessIdentity? identity)
     {
-        if (identity is null)
-        {
-            return false;
-        }
-
-        if (identity.ProcessId is IdleProcessId or SystemProcessId)
-        {
-            return false;
-        }
-
-        if (identity.ProcessId == Environment.ProcessId)
-        {
-            return false;
-        }
-
-        return true;
+        return GetProtectionResourceKey(identity) is null;
     }
 
     public string? GetProtectionResourceKey(ProcessIdentity? identity)
@@ -49,6 +52,16 @@ public sealed class ProcessTerminationService
         if (identity.ProcessId == Environment.ProcessId)
         {
             return "Error_SelfProtected";
+        }
+
+        if (IsCriticalProcessName(identity.ProcessName))
+        {
+            return "Error_CriticalProtected";
+        }
+
+        if (!HasVerifiableExpectedIdentity(identity))
+        {
+            return "Error_IdentityUnverified";
         }
 
         return null;
@@ -86,30 +99,40 @@ public sealed class ProcessTerminationService
 
             DateTime? actualStartTime = null;
             string? actualName = null;
+            string? actualPath = null;
             try
             {
                 actualStartTime = process.StartTime;
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+            {
+                // StartTime is not always readable without privileges.
+            }
+
+            try
+            {
                 actualName = process.ProcessName;
             }
             catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
             {
-                // Compare with whatever is readable; the file name is a fallback safety net.
+                // ProcessName can fail for some protected processes.
             }
 
-            if (expected.StartTime is { } expectedStart && actualStartTime is { } actualStart
-                && expectedStart != actualStart)
+            try
             {
-                throw new ProcessIdentityMismatchException();
+                actualPath = process.MainModule?.FileName;
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException)
+            {
+                // MainModule often requires higher privileges than the snapshot path query.
             }
 
-            if (!string.IsNullOrWhiteSpace(expected.ProcessName) && actualName is not null)
+            if (actualName is not null && IsCriticalProcessName(actualName))
             {
-                string expectedName = StripExe(expected.ProcessName);
-                if (!string.Equals(expectedName, actualName, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new ProcessIdentityMismatchException();
-                }
+                throw new ProtectedProcessException("Error_CriticalProtected");
             }
+
+            EnsureIdentityMatches(expected, actualStartTime, actualName, actualPath);
 
             try
             {
@@ -129,6 +152,86 @@ public sealed class ProcessTerminationService
             }
         }
     }
+
+    /// <summary>
+    /// Fail-closed identity check: require matching StartTime on both sides, or
+    /// matching name + path on both sides. Any readable field that disagrees is a mismatch.
+    /// </summary>
+    private static void EnsureIdentityMatches(
+        ProcessIdentity expected,
+        DateTime? actualStartTime,
+        string? actualName,
+        string? actualPath)
+    {
+        bool startTimeVerified = false;
+        if (expected.StartTime is { } expectedStart && actualStartTime is { } actualStart)
+        {
+            if (expectedStart != actualStart)
+            {
+                throw new ProcessIdentityMismatchException();
+            }
+
+            startTimeVerified = true;
+        }
+
+        bool nameVerified = false;
+        if (!string.IsNullOrWhiteSpace(expected.ProcessName) && actualName is not null)
+        {
+            if (!NamesEqual(expected.ProcessName, actualName))
+            {
+                throw new ProcessIdentityMismatchException();
+            }
+
+            nameVerified = true;
+        }
+
+        bool pathVerified = false;
+        if (!string.IsNullOrWhiteSpace(expected.ExecutablePath) && actualPath is not null)
+        {
+            if (!string.Equals(expected.ExecutablePath, actualPath, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ProcessIdentityMismatchException();
+            }
+
+            pathVerified = true;
+        }
+
+        if (startTimeVerified)
+        {
+            return;
+        }
+
+        if (nameVerified && pathVerified)
+        {
+            return;
+        }
+
+        throw new ProcessIdentityUnverifiedException();
+    }
+
+    private static bool HasVerifiableExpectedIdentity(ProcessIdentity identity)
+    {
+        if (identity.StartTime is not null)
+        {
+            return true;
+        }
+
+        return !string.IsNullOrWhiteSpace(identity.ProcessName)
+            && !string.IsNullOrWhiteSpace(identity.ExecutablePath);
+    }
+
+    internal static bool IsCriticalProcessName(string? processName)
+    {
+        if (string.IsNullOrWhiteSpace(processName))
+        {
+            return false;
+        }
+
+        return CriticalProcessNames.Contains(StripExe(processName));
+    }
+
+    private static bool NamesEqual(string expected, string actual) =>
+        string.Equals(StripExe(expected), StripExe(actual), StringComparison.OrdinalIgnoreCase);
 
     private static string StripExe(string processName)
     {

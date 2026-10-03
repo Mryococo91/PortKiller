@@ -15,6 +15,12 @@
   <data name="SearchBox.PlaceholderText" xml:space="preserve">
     <value>Rechercher un port, un PID, un processus ou un chemin</value>
   </data>
+  <data name="SearchBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Recherche de ports</value>
+  </data>
+  <data name="SearchBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Rechercher (Ctrl+F ou /)</value>
+  </data>
   <data name="ShowAllTcpCheckBox.Content" xml:space="preserve">
     <value>Toutes les connexions TCP</value>
   </data>
@@ -27,8 +33,20 @@
   <data name="RefreshButtonText.Text" xml:space="preserve">
     <value>Actualiser</value>
   </data>
+  <data name="RefreshButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Actualiser</value>
+  </data>
+  <data name="RefreshButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Actualiser (F5)</value>
+  </data>
   <data name="ExportButtonText.Text" xml:space="preserve">
     <value>Exporter CSV</value>
+  </data>
+  <data name="ExportButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Exporter CSV</value>
+  </data>
+  <data name="ExportButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Exporter CSV (Ctrl+E)</value>
   </data>
   <data name="Export_CsvFileType" xml:space="preserve">
     <value>Fichier CSV</value>
@@ -38,6 +56,21 @@
   </data>
   <data name="TerminateButtonText.Text" xml:space="preserve">
     <value>Terminer le processus</value>
+  </data>
+  <data name="TerminateButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Terminer le processus</value>
+  </data>
+  <data name="TerminateButton.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Terminer le processus (Suppr)</value>
+  </data>
+  <data name="LanguageBox.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Langue</value>
+  </data>
+  <data name="LanguageBox.[using:Microsoft.UI.Xaml.Controls]ToolTipService.ToolTip" xml:space="preserve">
+    <value>Langue d'affichage</value>
+  </data>
+  <data name="PortsList.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve">
+    <value>Liste des ports</value>
   </data>
   <data name="ElevationBanner.Title" xml:space="preserve">
     <value>Exécution sans privilèges élevés</value>
@@ -51,8 +84,11 @@
   <data name="ErrorBanner.Title" xml:space="preserve">
     <value>Erreur</value>
   </data>
-  <data name="SuccessBanner.Title" xml:space="preserve">
+  <data name="SuccessTitle_Terminated" xml:space="preserve">
     <value>Processus terminé</value>
+  </data>
+  <data name="SuccessTitle_Exported" xml:space="preserve">
+    <value>Export terminé</value>
   </data>
   <data name="ColumnPort.Text" xml:space="preserve">
     <value>Port</value>
@@ -173,6 +209,9 @@
   <data name="Error_IdentityMismatch" xml:space="preserve">
     <value>Le processus a changé depuis l'affichage (le PID a peut-être été réutilisé). La liste va être actualisée.</value>
   </data>
+  <data name="Error_IdentityUnverified" xml:space="preserve">
+    <value>Impossible de vérifier l'identité du processus. La terminaison a été refusée pour éviter de tuer le mauvais processus.</value>
+  </data>
   <data name="Error_NoProcessSelected" xml:space="preserve">
     <value>Aucun processus sélectionné.</value>
   </data>
@@ -184,6 +223,9 @@
   </data>
   <data name="Error_SelfProtected" xml:space="preserve">
     <value>Port Killer ne peut pas se terminer lui-même depuis cette action.</value>
+  </data>
+  <data name="Error_CriticalProtected" xml:space="preserve">
+    <value>Ce processus critique du système ne peut pas être terminé.</value>
   </data>
   <data name="Error_CannotResolvePath" xml:space="preserve">
     <value>Impossible de déterminer le chemin de Port Killer.</value>
@@ -213,7 +255,7 @@
     <value>ÉCOUTE</value>
   </data>
   <data name="State_SynSent" xml:space="preserve">
-    <value>SYN_SENT</value>
+    <value>SYN_ENVOYÉ</value>
   </data>
   <data name="State_SynReceived" xml:space="preserve">
     <value>SYN_REÇU</value>
@@ -222,24 +264,24 @@
     <value>ÉTABLI</value>
   </data>
   <data name="State_FinWait1" xml:space="preserve">
-    <value>FIN_WAIT_1</value>
+    <value>FIN_ATTENTE_1</value>
   </data>
   <data name="State_FinWait2" xml:space="preserve">
-    <value>FIN_WAIT_2</value>
+    <value>FIN_ATTENTE_2</value>
   </data>
   <data name="State_CloseWait" xml:space="preserve">
-    <value>CLOSE_WAIT</value>
+    <value>ATTENTE_FERMETURE</value>
   </data>
   <data name="State_Closing" xml:space="preserve">
-    <value>CLOSING</value>
+    <value>FERMETURE</value>
   </data>
   <data name="State_LastAck" xml:space="preserve">
-    <value>LAST_ACK</value>
+    <value>DERNIER_ACK</value>
   </data>
   <data name="State_TimeWait" xml:space="preserve">
-    <value>TIME_WAIT</value>
+    <value>ATTENTE_TEMPORELLE</value>
   </data>
   <data name="State_DeleteTcb" xml:space="preserve">
-    <value>DELETE_TCB</value>
+    <value>SUPPRIMER_TCB</value>
   </data>
 </root>

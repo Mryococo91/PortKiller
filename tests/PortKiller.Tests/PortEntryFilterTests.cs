@@ -4,11 +4,13 @@ using Xunit;
 
 namespace PortKiller.Tests;
 
-public sealed class PortEntryFilterTests
+public sealed class PortEntryFilterTests : IDisposable
 {
+    private readonly IDisposable _localize;
+
     public PortEntryFilterTests()
     {
-        PortDisplayFormatter.Localize = static key => key switch
+        _localize = PortDisplayFormatter.Use(static key => key switch
         {
             "Protocol_Tcp" => "TCP",
             "Protocol_Udp" => "UDP",
@@ -16,8 +18,10 @@ public sealed class PortEntryFilterTests
             "State_Established" => "ÉTABLI",
             "State_NotApplicable" => "—",
             _ => key
-        };
+        });
     }
+
+    public void Dispose() => _localize.Dispose();
 
     [Fact]
     public void BusinessFilter_KeepsUdpAndListeningTcp_ByDefault()

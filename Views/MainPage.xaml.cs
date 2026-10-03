@@ -69,7 +69,7 @@ public sealed partial class MainPage : Page
             });
         }
 
-        string saved = LocalizationService.GetSavedLanguageTag();
+        string saved = ViewModel.Preferences.LanguageTag;
         LanguageBox.SelectedItem = LanguageBox.Items.OfType<ComboBoxItem>()
             .First(item => (string?)item.Tag == saved);
         _suppressLanguageChange = false;
@@ -98,7 +98,6 @@ public sealed partial class MainPage : Page
             ColPort.ActualWidth > 0 ? ColPort.ActualWidth : ColPort.Width.Value,
             ColProtocol.ActualWidth > 0 ? ColProtocol.ActualWidth : ColProtocol.Width.Value,
             ColState.ActualWidth > 0 ? ColState.ActualWidth : ColState.Width.Value,
-            ViewModel.Preferences.ColumnLocalAddressWidth,
             ColPid.ActualWidth > 0 ? ColPid.ActualWidth : ColPid.Width.Value,
             ColProcess.ActualWidth > 0 ? ColProcess.ActualWidth : ColProcess.Width.Value);
     }
@@ -131,12 +130,12 @@ public sealed partial class MainPage : Page
         }
 
         string tag = item.Tag as string ?? LocalizationService.SystemTag;
-        if (tag == LocalizationService.GetSavedLanguageTag())
+        if (tag == ViewModel.Preferences.LanguageTag)
         {
             return;
         }
 
-        LocalizationService.SaveLanguage(tag);
+        LocalizationService.SaveLanguage(ViewModel.Preferences, tag);
         _lifecycle.RestartCurrentProcess();
     }
 
@@ -182,14 +181,6 @@ public sealed partial class MainPage : Page
         await ViewModel.RefreshCommand.ExecuteAsync(null);
     }
 
-    private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
-    {
-        if (ViewModel.SearchQuery != SearchBox.Text)
-        {
-            ViewModel.SearchQuery = SearchBox.Text;
-        }
-    }
-
     private void OnAutoRefreshToggled(object sender, RoutedEventArgs e)
     {
         UpdateAutoRefreshTimer();
@@ -205,11 +196,6 @@ public sealed partial class MainPage : Page
         {
             _autoRefreshTimer.Stop();
         }
-    }
-
-    private async void OnTerminateClicked(object sender, RoutedEventArgs e)
-    {
-        await ViewModel.TerminateSelectedCommand.ExecuteAsync(null);
     }
 
     private async void OnRelaunchAsAdminClicked(object sender, RoutedEventArgs e)
@@ -276,7 +262,6 @@ public sealed partial class MainPage : Page
     {
         args.Handled = true;
         ViewModel.ClearSearch();
-        SearchBox.Text = string.Empty;
         SearchBox.Focus(FocusState.Programmatic);
     }
 

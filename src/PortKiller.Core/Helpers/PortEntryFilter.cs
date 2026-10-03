@@ -41,6 +41,7 @@ public static class PortEntryFilter
             || Contains(entry.ProcessNameDisplay, trimmed)
             || Contains(entry.ExecutablePath, trimmed)
             || Contains(entry.LocalAddressDisplay, trimmed)
+            || Contains(entry.RemoteEndpointDisplay, trimmed)
             || Contains(entry.ProtocolDisplay, trimmed)
             || Contains(entry.StateDisplay, trimmed)
             || Contains(PortDisplayFormatter.GetCanonicalProtocol(entry.Endpoint.Protocol), trimmed)

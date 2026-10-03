@@ -55,8 +55,8 @@ on publish they join the same MUI contract under `runtime/`.
 - Default / fallback: `en-US` (`DefaultLanguage` in the project file)
 - Additional UI language: `fr-FR`
 - Startup: follow `ApplicationLanguages` / Windows display language
-- Optional override: combo box in the toolbar, persisted in
-  `%LocalAppData%\PortKiller\language.txt`
+- Optional override: combo box in the toolbar, persisted as `languageTag`
+  in `%LocalAppData%\PortKiller\settings.json` (legacy `language.txt` is migrated)
 - Changing language restarts the process so `x:Uid` resources reload
 - Code, comments, scripts, installer markup, and docs stay in English
 
@@ -86,7 +86,7 @@ ProcessTerminationService (identity check → Process.Kill)
 | --- | --- | --- |
 | Port source | IP Helper `OWNER_PID` IPv4+IPv6 | Only stable API that yields the PID without a shell |
 | Executable path | `OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION)` + `QueryFullProcessImageNameW` | `Process.MainModule` often fails without admin |
-| Kill | `Process.Kill()` after `{PID, StartTime, ProcessName}` | Avoids killing a reused PID |
+| Kill | `Process.Kill()` only after fail-closed identity check | Require matching `StartTime`, or matching name+path; refuse if unverifiable. Also block critical OS process names |
 | Default view | TCP LISTENING + UDP | ESTABLISHED connections are too noisy |
 | Auto-refresh | Off by default, 5 s when enabled | Stay light in the background |
 | Elevation | Never at launch; optional button | Main use (local dev) does not need admin |
@@ -98,8 +98,8 @@ ProcessTerminationService (identity check → Process.Kill)
 | Localization | `.resw` + system language, English fallback | Open-source default; French kept as a first-class UI language |
 | Versioning | `Directory.Build.props` `<Version>` | Shared by `dotnet` assemblies and publish scripts (`PortKiller-<version>-win-x64.zip` / `.msi`) |
 | Tests | `PortKiller.Core` + xUnit | Avoids WinAppSDK COM init in CI |
-| Signing | Unsigned by default | `scripts/sign-artifacts.ps1` + optional `SIGNING_PFX_*` secrets; see `docs/SIGNING.md` |
-| Preferences | `%LocalAppData%\PortKiller\settings.json` | Auto-refresh, show-all-TCP, sort, column widths |
+| Signing | Unsigned by default | Sign launcher + `runtime\PortKiller.exe` before ZIP; Uninstaller before MSI; optional `SIGNING_PFX_*` — see `docs/SIGNING.md` |
+| Preferences | `%LocalAppData%\PortKiller\settings.json` | Language, window size, auto-refresh, show-all-TCP, sort, column widths, elevation banner dismissal |
 | Release | Tag `v*` | `.github/workflows/release.yml` builds multi-arch ZIP/MSI |
 
 ## Protected processes
@@ -109,6 +109,8 @@ Never offer to kill:
 - PID 0 (Idle)
 - PID 4 (System)
 - The Port Killer process itself
+- Critical OS image names (`csrss`, `wininit`, `winlogon`, `services`, `lsass`, `smss`, …)
+- Processes whose identity cannot be verified (no matching `StartTime`, and no matching name+path)
 
 ## Permissions
 
