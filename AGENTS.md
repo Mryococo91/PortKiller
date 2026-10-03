@@ -46,5 +46,7 @@ Distribution:
 
 Version: edit `<Version>` in `Directory.Build.props`.
 MSI helper binary must be named `Uninstaller.exe` only (never `Desinstaller.exe`).
+Smoke: `.\scripts\run-smoke-checks.ps1` (add `-Publish` before a release).
+Tag `v*` triggers `.github/workflows/release.yml`.
 
 See `README.md` for detailed commands.

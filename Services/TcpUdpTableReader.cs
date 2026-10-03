@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using PortKiller.Helpers;
 using PortKiller.Models;
 using PortKiller.Native;
 
@@ -128,11 +129,7 @@ public sealed class TcpUdpTableReader
         }
     }
 
-    private static TcpConnectionState MapTcpState(uint state)
-    {
-        var mapped = (TcpConnectionState)state;
-        return Enum.IsDefined(mapped) ? mapped : TcpConnectionState.None;
-    }
+    private static TcpConnectionState MapTcpState(uint state) => NetworkMapping.MapTcpState(state);
 
     private delegate uint NativeTableCall(nint buffer, ref uint size);
 

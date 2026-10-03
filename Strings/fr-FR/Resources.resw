@@ -27,6 +27,15 @@
   <data name="RefreshButtonText.Text" xml:space="preserve">
     <value>Actualiser</value>
   </data>
+  <data name="ExportButtonText.Text" xml:space="preserve">
+    <value>Exporter CSV</value>
+  </data>
+  <data name="Export_CsvFileType" xml:space="preserve">
+    <value>Fichier CSV</value>
+  </data>
+  <data name="Success_Exported" xml:space="preserve">
+    <value>Exporté vers {0}</value>
+  </data>
   <data name="TerminateButtonText.Text" xml:space="preserve">
     <value>Terminer le processus</value>
   </data>

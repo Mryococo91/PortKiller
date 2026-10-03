@@ -12,6 +12,8 @@ public sealed class MainViewModel : ObservableObject
     private readonly PortSnapshotService _snapshotService;
     private readonly ProcessTerminationService _terminationService;
     private readonly IDialogService _dialogService;
+    private readonly IFileExportService _fileExportService;
+    private readonly UserPreferences _preferences;
 
     private IReadOnlyList<PortEntry> _snapshot = [];
     private CancellationTokenSource? _refreshCts;
@@ -22,22 +24,41 @@ public sealed class MainViewModel : ObservableObject
     private bool _showAllTcpConnections;
     private bool _isAutoRefreshEnabled;
     private bool _isElevationBannerOpen;
+    private bool _offerRelaunchAsAdmin;
     private PortEntry? _selectedEntry;
     private string _successMessage = string.Empty;
+    private PortSortColumn _sortColumn;
+    private bool _sortAscending;
 
     public MainViewModel(
         PortSnapshotService snapshotService,
         ProcessTerminationService terminationService,
-        IDialogService dialogService)
+        IDialogService dialogService,
+        IFileExportService fileExportService,
+        UserPreferences preferences)
     {
         _snapshotService = snapshotService;
         _terminationService = terminationService;
         _dialogService = dialogService;
+        _fileExportService = fileExportService;
+        _preferences = preferences;
+
+        _showAllTcpConnections = preferences.ShowAllTcpConnections;
+        _isAutoRefreshEnabled = preferences.IsAutoRefreshEnabled;
+        _sortColumn = preferences.SortColumn;
+        _sortAscending = preferences.SortAscending;
 
         VisibleEntries = [];
         SelectedProcessPorts = [];
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, () => !IsBusy);
         TerminateSelectedCommand = new AsyncRelayCommand(ConfirmAndTerminateSelectedAsync, () => CanTerminateSelected);
+        ExportCsvCommand = new AsyncRelayCommand(ExportCsvAsync, () => !IsBusy && VisibleEntries.Count > 0);
+        SortByPortCommand = new RelayCommand(() => ToggleSort(PortSortColumn.Port));
+        SortByProtocolCommand = new RelayCommand(() => ToggleSort(PortSortColumn.Protocol));
+        SortByStateCommand = new RelayCommand(() => ToggleSort(PortSortColumn.State));
+        SortByLocalAddressCommand = new RelayCommand(() => ToggleSort(PortSortColumn.LocalAddress));
+        SortByPidCommand = new RelayCommand(() => ToggleSort(PortSortColumn.Pid));
+        SortByProcessCommand = new RelayCommand(() => ToggleSort(PortSortColumn.Process));
         IsAdministrator = ElevationHelper.IsAdministrator();
         _isElevationBannerOpen = !IsAdministrator;
     }
@@ -50,6 +71,20 @@ public sealed class MainViewModel : ObservableObject
 
     public IAsyncRelayCommand TerminateSelectedCommand { get; }
 
+    public IAsyncRelayCommand ExportCsvCommand { get; }
+
+    public IRelayCommand SortByPortCommand { get; }
+
+    public IRelayCommand SortByProtocolCommand { get; }
+
+    public IRelayCommand SortByStateCommand { get; }
+
+    public IRelayCommand SortByLocalAddressCommand { get; }
+
+    public IRelayCommand SortByPidCommand { get; }
+
+    public IRelayCommand SortByProcessCommand { get; }
+
     public bool IsAdministrator { get; }
 
     public bool IsElevationBannerOpen
@@ -57,6 +92,20 @@ public sealed class MainViewModel : ObservableObject
         get => _isElevationBannerOpen;
         set => SetProperty(ref _isElevationBannerOpen, value);
     }
+
+    public bool OfferRelaunchAsAdmin
+    {
+        get => _offerRelaunchAsAdmin;
+        private set
+        {
+            if (SetProperty(ref _offerRelaunchAsAdmin, value))
+            {
+                OnPropertyChanged(nameof(ShowErrorAdminAction));
+            }
+        }
+    }
+
+    public bool ShowErrorAdminAction => HasError && OfferRelaunchAsAdmin && !IsAdministrator;
 
     public bool IsBusy
     {
@@ -67,6 +116,7 @@ public sealed class MainViewModel : ObservableObject
             {
                 OnPropertyChanged(nameof(IsEmpty));
                 RefreshCommand.NotifyCanExecuteChanged();
+                ExportCsvCommand.NotifyCanExecuteChanged();
             }
         }
     }
@@ -79,6 +129,7 @@ public sealed class MainViewModel : ObservableObject
             if (SetProperty(ref _errorMessage, value))
             {
                 OnPropertyChanged(nameof(HasError));
+                OnPropertyChanged(nameof(ShowErrorAdminAction));
             }
         }
     }
@@ -124,6 +175,8 @@ public sealed class MainViewModel : ObservableObject
         {
             if (SetProperty(ref _showAllTcpConnections, value))
             {
+                _preferences.ShowAllTcpConnections = value;
+                _preferences.Save();
                 ApplyFilter();
             }
         }
@@ -132,8 +185,51 @@ public sealed class MainViewModel : ObservableObject
     public bool IsAutoRefreshEnabled
     {
         get => _isAutoRefreshEnabled;
-        set => SetProperty(ref _isAutoRefreshEnabled, value);
+        set
+        {
+            if (SetProperty(ref _isAutoRefreshEnabled, value))
+            {
+                _preferences.IsAutoRefreshEnabled = value;
+                _preferences.Save();
+            }
+        }
     }
+
+    public PortSortColumn SortColumn
+    {
+        get => _sortColumn;
+        private set
+        {
+            if (SetProperty(ref _sortColumn, value))
+            {
+                NotifySortHeaders();
+            }
+        }
+    }
+
+    public bool SortAscending
+    {
+        get => _sortAscending;
+        private set
+        {
+            if (SetProperty(ref _sortAscending, value))
+            {
+                NotifySortHeaders();
+            }
+        }
+    }
+
+    public string PortSortGlyph => SortGlyph(PortSortColumn.Port);
+
+    public string ProtocolSortGlyph => SortGlyph(PortSortColumn.Protocol);
+
+    public string StateSortGlyph => SortGlyph(PortSortColumn.State);
+
+    public string LocalAddressSortGlyph => SortGlyph(PortSortColumn.LocalAddress);
+
+    public string PidSortGlyph => SortGlyph(PortSortColumn.Pid);
+
+    public string ProcessSortGlyph => SortGlyph(PortSortColumn.Process);
 
     public PortEntry? SelectedEntry
     {
@@ -221,6 +317,7 @@ public sealed class MainViewModel : ObservableObject
 
         IsBusy = true;
         ErrorMessage = null;
+        OfferRelaunchAsAdmin = false;
 
         try
         {
@@ -273,10 +370,18 @@ public sealed class MainViewModel : ObservableObject
             return;
         }
 
+        OfferRelaunchAsAdmin = false;
+
         try
         {
             await _terminationService.TerminateAsync(identity);
             SuccessMessage = AppStrings.Format("Success_Terminated", identity.FriendlyName, identity.ProcessId);
+            await RefreshAsync();
+        }
+        catch (ProcessAccessDeniedException ex)
+        {
+            ErrorMessage = AppStrings.Format("Error_AccessDenied", ex.DisplayName);
+            OfferRelaunchAsAdmin = !IsAdministrator;
             await RefreshAsync();
         }
         catch (PortKillerException ex)
@@ -290,6 +395,29 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
+    public async Task ExportCsvAsync()
+    {
+        if (VisibleEntries.Count == 0)
+        {
+            return;
+        }
+
+        string csv = PortEntryCsvExporter.Export(VisibleEntries);
+        string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        string? path = await _fileExportService.SaveTextAsync(
+            $"PortKiller-{stamp}",
+            AppStrings.Get("Export_CsvFileType"),
+            ".csv",
+            csv);
+
+        if (path is null)
+        {
+            return;
+        }
+
+        SuccessMessage = AppStrings.Format("Success_Exported", path);
+    }
+
     public void ClearSearch()
     {
         SearchQuery = string.Empty;
@@ -298,6 +426,7 @@ public sealed class MainViewModel : ObservableObject
     public void DismissError()
     {
         ErrorMessage = null;
+        OfferRelaunchAsAdmin = false;
     }
 
     public void DismissSuccess()
@@ -305,11 +434,50 @@ public sealed class MainViewModel : ObservableObject
         SuccessMessage = string.Empty;
     }
 
+    public void SaveColumnWidths(
+        double port,
+        double protocol,
+        double state,
+        double localAddress,
+        double pid,
+        double process)
+    {
+        _preferences.ColumnPortWidth = ClampWidth(port, 48);
+        _preferences.ColumnProtocolWidth = ClampWidth(protocol, 56);
+        _preferences.ColumnStateWidth = ClampWidth(state, 72);
+        _preferences.ColumnLocalAddressWidth = ClampWidth(localAddress, 100);
+        _preferences.ColumnPidWidth = ClampWidth(pid, 48);
+        _preferences.ColumnProcessWidth = ClampWidth(process, 100);
+        _preferences.Save();
+    }
+
+    public UserPreferences Preferences => _preferences;
+
+    private void ToggleSort(PortSortColumn column)
+    {
+        if (SortColumn == column)
+        {
+            SortAscending = !SortAscending;
+        }
+        else
+        {
+            SortColumn = column;
+            SortAscending = true;
+        }
+
+        _preferences.SortColumn = SortColumn;
+        _preferences.SortAscending = SortAscending;
+        _preferences.Save();
+        ApplyFilter();
+    }
+
     private void ApplyFilter()
     {
         IEnumerable<PortEntry> filtered = _snapshot
             .Where(entry => PortEntryFilter.MatchesBusinessFilter(entry, ShowAllTcpConnections))
             .Where(entry => PortEntryFilter.MatchesSearch(entry, SearchQuery));
+
+        filtered = PortEntrySorter.Sort(filtered, SortColumn, SortAscending);
 
         VisibleEntries.Clear();
         foreach (PortEntry entry in filtered)
@@ -325,6 +493,7 @@ public sealed class MainViewModel : ObservableObject
             : AppStrings.Format("Status_Results", VisibleEntries.Count, totalBusiness);
 
         OnPropertyChanged(nameof(IsEmpty));
+        ExportCsvCommand.NotifyCanExecuteChanged();
         UpdateSelectedProcessPorts();
     }
 
@@ -360,6 +529,29 @@ public sealed class MainViewModel : ObservableObject
 
         SelectedEntry = match;
     }
+
+    private string SortGlyph(PortSortColumn column)
+    {
+        if (SortColumn != column)
+        {
+            return string.Empty;
+        }
+
+        return SortAscending ? "▲" : "▼";
+    }
+
+    private void NotifySortHeaders()
+    {
+        OnPropertyChanged(nameof(PortSortGlyph));
+        OnPropertyChanged(nameof(ProtocolSortGlyph));
+        OnPropertyChanged(nameof(StateSortGlyph));
+        OnPropertyChanged(nameof(LocalAddressSortGlyph));
+        OnPropertyChanged(nameof(PidSortGlyph));
+        OnPropertyChanged(nameof(ProcessSortGlyph));
+    }
+
+    private static double ClampWidth(double width, double min) =>
+        Math.Clamp(width, min, 800);
 
     private static string LocalizeTerminationError(PortKillerException ex)
     {

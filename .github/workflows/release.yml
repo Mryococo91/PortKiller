@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: win-x64
+            platform: x64
+            build_msi: true
+          - runtime: win-x86
+            platform: x86
+            build_msi: true
+          - runtime: win-arm64
+            platform: ARM64
+            build_msi: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $version = & .\scripts\Get-PortKillerVersion.ps1
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Version $version"
+
+      - name: Publish packages
+        shell: pwsh
+        run: |
+          if ("${{ matrix.build_msi }}" -eq "true") {
+            .\scripts\publish-msi.ps1 -Runtime ${{ matrix.runtime }} -Version ${{ steps.version.outputs.version }}
+          } else {
+            .\scripts\publish-portable.ps1 -Runtime ${{ matrix.runtime }} -Version ${{ steps.version.outputs.version }}
+          }
+
+      - name: Optional Authenticode sign
+        env:
+          SIGNING_PFX_BASE64: ${{ secrets.SIGNING_PFX_BASE64 }}
+          SIGNING_PFX_PASSWORD: ${{ secrets.SIGNING_PFX_PASSWORD }}
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:SIGNING_PFX_BASE64)) {
+            Write-Host "Signing secrets not configured; skipping."
+            exit 0
+          }
+          $paths = @("artifacts\portable\${{ matrix.runtime }}\PortKiller.exe")
+          $msi = "artifacts\msi\PortKiller-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.msi"
+          if (Test-Path $msi) { $paths += $msi }
+          .\scripts\sign-artifacts.ps1 -Paths $paths
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortKiller-${{ matrix.runtime }}
+          path: |
+            artifacts/portable/PortKiller-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.zip
+            artifacts/msi/PortKiller-${{ steps.version.outputs.version }}-${{ matrix.runtime }}.msi
+          if-no-files-found: error
+
+  publish-github-release:
+    needs: build-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,7 +1,6 @@
-using System.Buffers.Binary;
 using System.Net;
 using System.Runtime.InteropServices;
-using PortKiller.Models;
+using PortKiller.Helpers;
 
 namespace PortKiller.Native;
 
@@ -91,15 +90,9 @@ internal static partial class IpHelperNative
         public uint OwningPid;
     }
 
-    internal static int ToHostPort(uint networkPort)
-    {
-        return BinaryPrimitives.ReverseEndianness((ushort)(networkPort & 0xFFFF));
-    }
+    internal static int ToHostPort(uint networkPort) => NetworkMapping.ToHostPort(networkPort);
 
-    internal static string FormatIpv4(uint networkAddress)
-    {
-        return new IPAddress(BitConverter.GetBytes(networkAddress)).ToString();
-    }
+    internal static string FormatIpv4(uint networkAddress) => NetworkMapping.FormatIpv4(networkAddress);
 
     internal static unsafe string FormatIpv6(byte* address, uint scopeId)
     {

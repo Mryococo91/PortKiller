@@ -3,13 +3,21 @@
 Run before tagging a release. Check each box on a clean Windows 10/11 machine
 when possible.
 
+## Automated subset
+
+```powershell
+.\scripts\run-smoke-checks.ps1          # build + tests (+ artifact checks if present)
+.\scripts\run-smoke-checks.ps1 -Publish # also rebuild ZIP + MSI
+```
+
 ## Build
 
 - [ ] `dotnet build PortKiller.sln -c Release -p:Platform=x64` succeeds
-- [ ] `dotnet test tests/PortKiller.Tests/PortKiller.Tests.csproj -c Release -p:Platform=x64` passes
+- [ ] `dotnet test tests/PortKiller.Tests/PortKiller.Tests.csproj -c Release` passes
 - [ ] `.\scripts\publish-portable.ps1` produces `artifacts\portable\PortKiller-<version>-win-x64.zip`
 - [ ] `.\scripts\publish-msi.ps1` produces `artifacts\msi\PortKiller-<version>-win-x64.msi`
 - [ ] MSI payload contains `Uninstaller.exe` and **never** `Desinstaller.exe`
+- [ ] Optional: `win-x86` / `win-arm64` portable publish succeeds
 
 ## Portable ZIP
 
@@ -18,16 +26,19 @@ when possible.
 - [ ] List shows TCP LISTENING + UDP without freezing
 - [ ] Search `3000` (or a known local port) isolates the row
 - [ ] Search `LISTENING` still matches when UI language is French
+- [ ] Click column headers sorts (port / PID / process / state)
+- [ ] Export CSV (`Ctrl+E`) writes a file with the visible rows
 - [ ] Details pane lists all ports for a multi-port process
 - [ ] Copy PID / path works
 - [ ] F5 refreshes; Delete opens confirmation; Escape clears search
+- [ ] Auto-refresh + “All TCP” survive an app restart (`settings.json`)
 
 ## Termination
 
 - [ ] Terminate a disposable user process (e.g. `python -m http.server 8765`) succeeds after confirm
 - [ ] PID 0 / PID 4 / self: Terminate stays disabled or shows a clear protection message
 - [ ] After kill, list refreshes and success banner appears
-- [ ] Access Denied (protected process without admin) shows the localized error
+- [ ] Access Denied (protected process without admin) shows the localized error **and** a Relaunch as administrator action
 
 ## Elevation & language
 

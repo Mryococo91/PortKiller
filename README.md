@@ -1,12 +1,45 @@
 # Port Killer
 
+[![CI](https://github.com/Mryococo91/PortKiller/actions/workflows/ci.yml/badge.svg)](https://github.com/Mryococo91/PortKiller/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Mryococo91/PortKiller)](https://github.com/Mryococo91/PortKiller/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Windows utility (WinUI 3) to see **which process is using which port**
 and terminate it without `netstat` / `taskkill`.
 
 Windows only. Free, open source (MIT). No account, no cloud, no telemetry.
 
+![Port Killer main window](docs/screenshots/portkiller-main.jpg)
+
 The UI follows the Windows display language (English and French shipped).
 Source code, comments, scripts, and documentation are in English.
+
+## Downloads
+
+Get the latest build from
+[GitHub Releases](https://github.com/Mryococo91/PortKiller/releases/latest):
+
+| File | Use |
+| --- | --- |
+| `PortKiller-<version>-win-x64.zip` | Portable — extract, run `PortKiller.exe` |
+| `PortKiller-<version>-win-x64.msi` | Installer — Program Files, shortcuts, `Uninstaller.exe` |
+| `PortKiller-<version>-win-x86.zip` / `.msi` | 32-bit Windows |
+| `PortKiller-<version>-win-arm64.zip` | ARM64 portable |
+
+Windows may show SmartScreen ("unknown publisher") because builds are
+unsigned by default: **More info → Run anyway**. See [`docs/SIGNING.md`](docs/SIGNING.md).
+
+Tagging `v*` on GitHub runs the [Release workflow](.github/workflows/release.yml)
+which builds ZIP/MSI (multi-arch) and attaches them to the release.
+
+## Features
+
+- TCP / UDP, IPv4 + IPv6 via IP Helper (no shell)
+- Search, column sort, CSV export (`Ctrl+E`)
+- Process details pane, safe terminate with confirmation
+- Auto-refresh, keyboard shortcuts, EN/FR UI
+- Preferences persisted (filters, sort, column widths)
+- Access Denied offers **Relaunch as administrator**
 
 ## Build prerequisites
 
@@ -20,6 +53,7 @@ Source code, comments, scripts, and documentation are in English.
 dotnet build PortKiller.sln -p:Platform=x64
 dotnet build PortKiller.sln -c Release -p:Platform=x64
 dotnet test tests/PortKiller.Tests/PortKiller.Tests.csproj -c Release
+.\scripts\run-smoke-checks.ps1
 ```
 
 Open `PortKiller.sln` in Visual Studio. Profiles:
@@ -30,66 +64,27 @@ Open `PortKiller.sln` in Visual Studio. Profiles:
 Version number lives in `Directory.Build.props` (`<Version>`). Publish scripts
 read it automatically for ZIP/MSI file names.
 
-## Distribute (GitHub / website)
-
-Two files are enough. **No paid certificate is required.**
-
-| File | Use |
-| --- | --- |
-| `PortKiller-<version>-win-x64.zip` | Portable build: extract, run `PortKiller.exe` |
-| `PortKiller-<version>-win-x64.msi` | Installs to Program Files, desktop + Start Menu shortcuts, `Uninstaller.exe` at the root |
-
-Windows may show SmartScreen ("unknown publisher") because the MSI is
-unsigned. That is expected and free: **More info → Run anyway**.
-After enough downloads the warning fades. A code-signing certificate is
-**not required**. Details: `docs/SIGNING.md`. Manual release checklist:
-`docs/SMOKE_TEST.md`.
-
-### 1. Portable (ZIP)
+## Distribute locally
 
 ```powershell
-.\scripts\publish-portable.ps1
+.\scripts\publish-portable.ps1          # ZIP for current -Runtime (default win-x64)
+.\scripts\publish-msi.ps1               # MSI (+ portable) for win-x64
+.\scripts\run-smoke-checks.ps1 -Publish # build, test, publish, verify Uninstaller.exe
 ```
 
-Output:
-
-- `artifacts\portable\win-x64\PortKiller.exe` (root launcher, with icon)
-- `artifacts\portable\win-x64\README.md` and `LICENSE`
-- `artifacts\portable\win-x64\runtime\` (.NET / WinUI engine + language folders)
-- `artifacts\portable\PortKiller-<version>-win-x64.zip`
-
-After extraction the root stays readable: exe, license, readme, `runtime` folder.
-
-Other architectures: `-Runtime win-x86` or `-Runtime win-arm64`.
-
-### 2. Installable (MSI)
-
-The script publishes the portable build first, then builds the `.msi` with
-[WiX](https://wixtoolset.org/) (free tooling).
+Optional signing after publish:
 
 ```powershell
-.\scripts\publish-msi.ps1
+$env:SIGNING_PFX_PATH = "C:\certs\portkiller.pfx"
+$env:SIGNING_PFX_PASSWORD = "***"
+.\scripts\sign-artifacts.ps1 -Paths @(
+  ".\artifacts\portable\win-x64\PortKiller.exe",
+  ".\artifacts\msi\PortKiller-1.1.0-win-x64.msi"
+)
 ```
 
-Output: `artifacts\msi\PortKiller-1.0.0-win-x64.msi`
-
-After install (`C:\Program Files\Port Killer`):
-
-- `PortKiller.exe` — launch the app
-- `Uninstaller.exe` — uninstall and remove files, shortcuts, and registry traces
-- **Port Killer** desktop shortcut (all users)
-
-```powershell
-.\scripts\publish-msi.ps1 -Runtime win-x86 -Version 1.0.0
-```
-
-Then install:
-
-```powershell
-msiexec /i .\artifacts\msi\PortKiller-1.0.0-win-x64.msi
-```
-
-or double-click the file.
+For CI signing, add repository secrets `SIGNING_PFX_BASE64` and
+`SIGNING_PFX_PASSWORD` (see `docs/SIGNING.md`).
 
 ### Equivalent portable command
 
@@ -122,7 +117,8 @@ sideload mode. Poor fit for a public download.
 The UI uses WinUI `.resw` resources and follows the Windows display language.
 English (`en-US`) is the default fallback. French (`fr-FR`) is included.
 Users can override the language in the app; the choice is stored under
-`%LocalAppData%\PortKiller\language.txt`.
+`%LocalAppData%\PortKiller\language.txt`. Other preferences live in
+`%LocalAppData%\PortKiller\settings.json`.
 
 To add a language:
 
@@ -139,5 +135,6 @@ See `docs/ARCHITECTURE.md`, `docs/PLAN.md`, `docs/STATUS.md`,
 PortKiller.sln
 src/PortKiller.Core/     Shared models + filter + termination
 tests/PortKiller.Tests/  Unit tests (no WinUI)
-.github/workflows/ci.yml Build + test on Windows
+.github/workflows/       CI + tag release
+scripts/                 publish, sign, smoke checks
 ```

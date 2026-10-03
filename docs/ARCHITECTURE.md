@@ -98,7 +98,9 @@ ProcessTerminationService (identity check → Process.Kill)
 | Localization | `.resw` + system language, English fallback | Open-source default; French kept as a first-class UI language |
 | Versioning | `Directory.Build.props` `<Version>` | Shared by `dotnet` assemblies and publish scripts (`PortKiller-<version>-win-x64.zip` / `.msi`) |
 | Tests | `PortKiller.Core` + xUnit | Avoids WinAppSDK COM init in CI |
-| Signing | Unsigned by default | See `docs/SIGNING.md`; SmartScreen → More info → Run anyway |
+| Signing | Unsigned by default | `scripts/sign-artifacts.ps1` + optional `SIGNING_PFX_*` secrets; see `docs/SIGNING.md` |
+| Preferences | `%LocalAppData%\PortKiller\settings.json` | Auto-refresh, show-all-TCP, sort, column widths |
+| Release | Tag `v*` | `.github/workflows/release.yml` builds multi-arch ZIP/MSI |
 
 ## Protected processes
 

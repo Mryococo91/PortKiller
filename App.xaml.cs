@@ -22,7 +22,14 @@ public partial class App : Application
         DialogService = new WinUiDialogService();
         ClipboardService = new ClipboardService();
         LifecycleService = new AppLifecycleService();
-        ViewModel = new MainViewModel(snapshotService, terminationService, DialogService);
+        FileExportService = new FileExportService(() => MainWindow);
+        UserPreferences preferences = UserPreferences.Load();
+        ViewModel = new MainViewModel(
+            snapshotService,
+            terminationService,
+            DialogService,
+            FileExportService,
+            preferences);
     }
 
     public MainViewModel ViewModel { get; }
@@ -32,6 +39,8 @@ public partial class App : Application
     public IClipboardService ClipboardService { get; }
 
     public IAppLifecycleService LifecycleService { get; }
+
+    public IFileExportService FileExportService { get; }
 
     public MainWindow? MainWindow => _window;
 
