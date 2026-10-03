@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SearchBox.PlaceholderText" xml:space="preserve">
+    <value>Search by port, PID, process, or path</value>
+  </data>
+  <data name="ShowAllTcpCheckBox.Content" xml:space="preserve">
+    <value>All TCP connections</value>
+  </data>
+  <data name="AutoRefreshSwitch.OffContent" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="AutoRefreshSwitch.OnContent" xml:space="preserve">
+    <value>Auto 5 s</value>
+  </data>
+  <data name="RefreshButtonText.Text" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="TerminateButtonText.Text" xml:space="preserve">
+    <value>Terminate process</value>
+  </data>
+  <data name="ElevationBanner.Title" xml:space="preserve">
+    <value>Running without elevated privileges</value>
+  </data>
+  <data name="ElevationBanner.Message" xml:space="preserve">
+    <value>Some process details and some terminations may require administrator privileges.</value>
+  </data>
+  <data name="RelaunchAdminButton.Content" xml:space="preserve">
+    <value>Relaunch as administrator</value>
+  </data>
+  <data name="ErrorBanner.Title" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="SuccessBanner.Title" xml:space="preserve">
+    <value>Process terminated</value>
+  </data>
+  <data name="ColumnPort.Text" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="ColumnProtocol.Text" xml:space="preserve">
+    <value>Protocol</value>
+  </data>
+  <data name="ColumnState.Text" xml:space="preserve">
+    <value>State</value>
+  </data>
+  <data name="ColumnLocalAddress.Text" xml:space="preserve">
+    <value>Local address</value>
+  </data>
+  <data name="ColumnPid.Text" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="ColumnProcess.Text" xml:space="preserve">
+    <value>Process</value>
+  </data>
+  <data name="EmptyTitle.Text" xml:space="preserve">
+    <value>No ports to display</value>
+  </data>
+  <data name="EmptySubtitle.Text" xml:space="preserve">
+    <value>Change the search or refresh the list.</value>
+  </data>
+  <data name="DetailsProcessTitle.Text" xml:space="preserve">
+    <value>Process</value>
+  </data>
+  <data name="DetailsNameLabel.Text" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="DetailsPidLabel.Text" xml:space="preserve">
+    <value>PID</value>
+  </data>
+  <data name="DetailsPathLabel.Text" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="DetailsStartedLabel.Text" xml:space="preserve">
+    <value>Started</value>
+  </data>
+  <data name="CopyPidButton.Content" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="CopyPathButton.Content" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Language_System" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="Status_Ready" xml:space="preserve">
+    <value>Ready.</value>
+  </data>
+  <data name="Status_Entries" xml:space="preserve">
+    <value>{0} entries</value>
+  </data>
+  <data name="Status_Results" xml:space="preserve">
+    <value>{0} of {1} results</value>
+  </data>
+  <data name="Status_RefreshFailed" xml:space="preserve">
+    <value>Refresh failed.</value>
+  </data>
+  <data name="Error_ReadPorts" xml:space="preserve">
+    <value>Unable to read ports: {0}</value>
+  </data>
+  <data name="Error_Terminate" xml:space="preserve">
+    <value>Unable to terminate the process: {0}</value>
+  </data>
+  <data name="Success_Terminated" xml:space="preserve">
+    <value>{0} (PID {1}) was terminated.</value>
+  </data>
+  <data name="Unavailable" xml:space="preserve">
+    <value>Unavailable</value>
+  </data>
+  <data name="PortsHeader" xml:space="preserve">
+    <value>Ports ({0})</value>
+  </data>
+  <data name="TerminateDialogTitle" xml:space="preserve">
+    <value>Terminate this process?</value>
+  </data>
+  <data name="TerminateDialogPrimary" xml:space="preserve">
+    <value>Terminate process</value>
+  </data>
+  <data name="TerminateDialogClose" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="TerminateConfirm_Name" xml:space="preserve">
+    <value>Name: {0}</value>
+  </data>
+  <data name="TerminateConfirm_Pid" xml:space="preserve">
+    <value>PID: {0}</value>
+  </data>
+  <data name="TerminateConfirm_Path" xml:space="preserve">
+    <value>Path: {0}</value>
+  </data>
+  <data name="TerminateConfirm_Ports" xml:space="preserve">
+    <value>Affected ports:</value>
+  </data>
+  <data name="TerminateConfirm_Warning" xml:space="preserve">
+    <value>This action cannot be undone. Applications that use this process will be interrupted.</value>
+  </data>
+  <data name="ElevationCanceledTitle" xml:space="preserve">
+    <value>Elevation cancelled</value>
+  </data>
+  <data name="ElevationCanceledContent" xml:space="preserve">
+    <value>Port Killer could not be relaunched as administrator.
+
+{0}</value>
+  </data>
+  <data name="ViewModelNotInitialized" xml:space="preserve">
+    <value>The view model was not initialized.</value>
+  </data>
+  <data name="Error_ProcessGone" xml:space="preserve">
+    <value>Process {0} no longer exists.</value>
+  </data>
+  <data name="Error_AccessDenied" xml:space="preserve">
+    <value>Access denied: unable to terminate {0}. Relaunch Port Killer as administrator if needed.</value>
+  </data>
+  <data name="Error_IdentityMismatch" xml:space="preserve">
+    <value>The process changed since it was listed (the PID may have been reused). The list will be refreshed.</value>
+  </data>
+  <data name="Error_NoProcessSelected" xml:space="preserve">
+    <value>No process is selected.</value>
+  </data>
+  <data name="Error_IdleProtected" xml:space="preserve">
+    <value>The Idle process (PID 0) cannot be terminated.</value>
+  </data>
+  <data name="Error_SystemProtected" xml:space="preserve">
+    <value>The System process (PID 4) cannot be terminated.</value>
+  </data>
+  <data name="Error_SelfProtected" xml:space="preserve">
+    <value>Port Killer cannot terminate itself from this action.</value>
+  </data>
+  <data name="Error_CannotResolvePath" xml:space="preserve">
+    <value>Unable to determine the Port Killer path.</value>
+  </data>
+  <data name="Error_NetworkTable" xml:space="preserve">
+    <value>Failed to read the network table (code {0}).</value>
+  </data>
+  <data name="Error_NetworkTableUnstable" xml:space="preserve">
+    <value>The network table changed too quickly to be read.</value>
+  </data>
+  <data name="Dialog_Ok" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Protocol_Tcp" xml:space="preserve">
+    <value>TCP</value>
+  </data>
+  <data name="Protocol_Udp" xml:space="preserve">
+    <value>UDP</value>
+  </data>
+  <data name="State_NotApplicable" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="State_Closed" xml:space="preserve">
+    <value>CLOSED</value>
+  </data>
+  <data name="State_Listen" xml:space="preserve">
+    <value>LISTENING</value>
+  </data>
+  <data name="State_SynSent" xml:space="preserve">
+    <value>SYN_SENT</value>
+  </data>
+  <data name="State_SynReceived" xml:space="preserve">
+    <value>SYN_RECEIVED</value>
+  </data>
+  <data name="State_Established" xml:space="preserve">
+    <value>ESTABLISHED</value>
+  </data>
+  <data name="State_FinWait1" xml:space="preserve">
+    <value>FIN_WAIT_1</value>
+  </data>
+  <data name="State_FinWait2" xml:space="preserve">
+    <value>FIN_WAIT_2</value>
+  </data>
+  <data name="State_CloseWait" xml:space="preserve">
+    <value>CLOSE_WAIT</value>
+  </data>
+  <data name="State_Closing" xml:space="preserve">
+    <value>CLOSING</value>
+  </data>
+  <data name="State_LastAck" xml:space="preserve">
+    <value>LAST_ACK</value>
+  </data>
+  <data name="State_TimeWait" xml:space="preserve">
+    <value>TIME_WAIT</value>
+  </data>
+  <data name="State_DeleteTcb" xml:space="preserve">
+    <value>DELETE_TCB</value>
+  </data>
+</root>

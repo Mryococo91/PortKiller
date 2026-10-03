@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "PortKiller (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "PortKiller (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

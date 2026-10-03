@@ -1,0 +1,101 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package
+    Name="Port Killer"
+    Manufacturer="Port Killer"
+    Version="$(ProductVersion)"
+    UpgradeCode="8F2A9C41-6B17-4D3E-A805-9C4E1F72B0D6"
+    Language="1033"
+    Scope="perMachine">
+    <SummaryInformation Description="See which Windows process is using a network port and terminate it." />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Port Killer is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Icon Id="AppIcon" SourceFile="..\Assets\AppIcon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+
+    <Property Id="INSTALLPATH" Secure="yes">
+      <RegistrySearch
+        Id="InstallPathSearch"
+        Root="HKLM"
+        Key="Software\PortKiller"
+        Name="InstallPath"
+        Type="raw" />
+    </Property>
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Port Killer" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuFolder" Name="Port Killer" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <ComponentGroup Id="PublishedApp" Directory="INSTALLFOLDER">
+      <Files Include="$(var.PublishDir)**" />
+    </ComponentGroup>
+
+    <ComponentGroup Id="Shortcuts" Directory="AppMenuFolder">
+      <Component>
+        <Shortcut
+          Name="Port Killer"
+          Description="View and free Windows network ports"
+          Target="[INSTALLFOLDER]PortKiller.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon" />
+        <Shortcut
+          Name="Uninstall Port Killer"
+          Description="Remove Port Killer without leaving traces"
+          Target="[INSTALLFOLDER]Uninstaller.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon" />
+        <RemoveFolder Id="AppMenuFolder" On="uninstall" />
+        <RegistryValue
+          Root="HKMU"
+          Key="Software\PortKiller"
+          Name="Installed"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+        <RegistryValue
+          Root="HKMU"
+          Key="Software\PortKiller"
+          Name="InstallPath"
+          Type="string"
+          Value="[INSTALLFOLDER]" />
+        <util:RemoveFolderEx Property="INSTALLPATH" On="uninstall" />
+      </Component>
+    </ComponentGroup>
+
+    <ComponentGroup Id="DesktopShortcuts" Directory="DesktopFolder">
+      <Component>
+        <Shortcut
+          Name="Port Killer"
+          Description="View and free Windows network ports"
+          Target="[INSTALLFOLDER]PortKiller.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon" />
+        <RegistryValue
+          Root="HKMU"
+          Key="Software\PortKiller"
+          Name="DesktopShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Feature Id="Main" Title="Port Killer" AllowAbsent="no">
+      <ComponentGroupRef Id="PublishedApp" />
+      <ComponentGroupRef Id="Shortcuts" />
+      <ComponentGroupRef Id="DesktopShortcuts" />
+    </Feature>
+
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+  </Package>
+</Wix>
